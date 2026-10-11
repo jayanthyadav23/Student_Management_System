@@ -43,7 +43,7 @@ public class Course {
     @Column(name = "academic_year", length = 20)
     private String academicYear = "2025-2026";
 
-    @Column(nullable = false, length = 20)
+    @Column(length = 20)
     private String status = "ACTIVE";
 
     public Course() {
@@ -131,10 +131,10 @@ public class Course {
     }
 
     public String getStatus() {
-        return status;
+        return (status != null && !status.isBlank()) ? status : "ACTIVE";
     }
 
     public void setStatus(String status) {
-        this.status = status;
+        this.status = (status != null && !status.isBlank()) ? status : "ACTIVE";
     }
 }

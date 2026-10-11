@@ -60,8 +60,34 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
+        backfillLegacyNullStatuses();
         seedDefaultAdmin();
         seedInitialDepartmentsAndDemoUsers();
+    }
+
+    private void backfillLegacyNullStatuses() {
+        try {
+            studentRepository.findAll().forEach(s -> {
+                if (s.getStatus() == null || s.getStatus().isBlank()) {
+                    s.setStatus("ACTIVE");
+                    studentRepository.save(s);
+                }
+            });
+            facultyRepository.findAll().forEach(f -> {
+                if (f.getStatus() == null || f.getStatus().isBlank()) {
+                    f.setStatus("ACTIVE");
+                    facultyRepository.save(f);
+                }
+            });
+            courseRepository.findAll().forEach(c -> {
+                if (c.getStatus() == null || c.getStatus().isBlank()) {
+                    c.setStatus("ACTIVE");
+                    courseRepository.save(c);
+                }
+            });
+        } catch (Exception e) {
+            logger.warn("Could not backfill legacy statuses: {}", e.getMessage());
+        }
     }
 
     private void seedDefaultAdmin() {

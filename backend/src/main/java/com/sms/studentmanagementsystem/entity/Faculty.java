@@ -29,7 +29,7 @@ public class Faculty {
     @Column(length = 150)
     private String specialization = "General";
 
-    @Column(nullable = false, length = 20)
+    @Column(length = 20)
     private String status = "ACTIVE";
 
     @Column(length = 25)
@@ -93,11 +93,11 @@ public class Faculty {
     }
 
     public String getStatus() {
-        return status;
+        return (status != null && !status.isBlank()) ? status : "ACTIVE";
     }
 
     public void setStatus(String status) {
-        this.status = status;
+        this.status = (status != null && !status.isBlank()) ? status : "ACTIVE";
     }
 
     public String getPhone() {
