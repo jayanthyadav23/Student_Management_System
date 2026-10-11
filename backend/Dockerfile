@@ -25,9 +25,9 @@ USER spring:spring
 # Copy built jar from build stage
 COPY --from=build /app/target/*.jar app.jar
 
-# Render passes the port in the PORT environment variable
+# Support Render port injection (defaults to 8080 if PORT not set, or 10000 if set by Render)
 ENV PORT=8080
-EXPOSE ${PORT}
+EXPOSE 8080 10000
 
 # Optimize JVM memory for container environments (Render free tier has 512MB RAM)
-ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
+ENTRYPOINT ["sh", "-c", "java -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Dserver.port=${PORT:-8080} -jar app.jar"]

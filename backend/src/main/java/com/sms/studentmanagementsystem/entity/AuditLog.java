@@ -7,7 +7,7 @@ import java.time.Instant;
 @Table(
         name = "audit_logs",
         indexes = {
-                @Index(name = "idx_audit_logs_timestamp", columnList = "timestamp"),
+                @Index(name = "idx_audit_logs_timestamp", columnList = "log_timestamp"),
                 @Index(name = "idx_audit_logs_action", columnList = "action")
         }
 )
@@ -29,7 +29,7 @@ public class AuditLog {
     @Column(length = 1000)
     private String details;
 
-    @Column(nullable = false, updatable = false)
+    @Column(name = "log_timestamp", nullable = false, updatable = false)
     private Instant timestamp;
 
     public AuditLog() {
