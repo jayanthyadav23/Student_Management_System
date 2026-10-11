@@ -26,6 +26,7 @@ public class DataInitializer implements CommandLineRunner {
     private final AnnouncementRepository announcementRepository;
     private final AuditLogRepository auditLogRepository;
     private final PasswordEncoder passwordEncoder;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     @Value("${app.admin.email:admin@sms.com}")
     private String adminEmail;
@@ -43,7 +44,8 @@ public class DataInitializer implements CommandLineRunner {
                            TimetableRepository timetableRepository,
                            AnnouncementRepository announcementRepository,
                            AuditLogRepository auditLogRepository,
-                           PasswordEncoder passwordEncoder) {
+                           PasswordEncoder passwordEncoder,
+                           org.springframework.jdbc.core.JdbcTemplate jdbcTemplate) {
         this.userRepository = userRepository;
         this.departmentRepository = departmentRepository;
         this.facultyRepository = facultyRepository;
@@ -55,14 +57,26 @@ public class DataInitializer implements CommandLineRunner {
         this.announcementRepository = announcementRepository;
         this.auditLogRepository = auditLogRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Override
     @Transactional
     public void run(String... args) {
+        cleanLegacyDatabaseColumns();
         backfillLegacyNullStatuses();
         seedDefaultAdmin();
         seedInitialDepartmentsAndDemoUsers();
+    }
+
+    private void cleanLegacyDatabaseColumns() {
+        try {
+            jdbcTemplate.execute("ALTER TABLE audit_logs DROP COLUMN IF EXISTS timestamp");
+            jdbcTemplate.execute("ALTER TABLE audit_logs DROP COLUMN IF EXISTS \"timestamp\"");
+            jdbcTemplate.execute("ALTER TABLE audit_logs ALTER COLUMN log_timestamp DROP NOT NULL");
+        } catch (Exception e) {
+            logger.info("Database column normalization note: {}", e.getMessage());
+        }
     }
 
     private void backfillLegacyNullStatuses() {
@@ -287,13 +301,17 @@ public class DataInitializer implements CommandLineRunner {
         }
 
         // 8. Seed Initial Audit Log if none exist
-        if (auditLogRepository.count() == 0) {
-            auditLogRepository.save(new AuditLog(
-                    "SYSTEM_INIT",
-                    "System Engine",
-                    "Institutional Catalog",
-                    "Academic departments, default super admin, courses, and timetable initialized."
-            ));
+        try {
+            if (auditLogRepository.count() == 0) {
+                auditLogRepository.save(new AuditLog(
+                        "SYSTEM_INIT",
+                        "System Engine",
+                        "Institutional Catalog",
+                        "Academic departments, default super admin, courses, and timetable initialized."
+                ));
+            }
+        } catch (Exception e) {
+            logger.warn("Initial audit log seeding skipped safely: {}", e.getMessage());
         }
     }
 }

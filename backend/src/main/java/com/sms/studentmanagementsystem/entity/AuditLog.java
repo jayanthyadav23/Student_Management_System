@@ -29,7 +29,7 @@ public class AuditLog {
     @Column(length = 1000)
     private String details;
 
-    @Column(name = "log_timestamp", nullable = false, updatable = false)
+    @Column(name = "log_timestamp")
     private Instant timestamp;
 
     public AuditLog() {
@@ -90,7 +90,7 @@ public class AuditLog {
     }
 
     public Instant getTimestamp() {
-        return timestamp;
+        return timestamp != null ? timestamp : Instant.now();
     }
 
     public void setTimestamp(Instant timestamp) {
