@@ -1,0 +1,10 @@
+#!/bin/sh
+DIR="$(cd "$(dirname "$0")" && pwd)"
+MAVEN_BIN="$DIR/.mvn/apache-maven-3.9.6/bin/mvn"
+if [ -f "$MAVEN_BIN" ]; then
+    chmod +x "$MAVEN_BIN"
+    exec "$MAVEN_BIN" "$@"
+else
+    echo "Error: Embedded Maven not found at $MAVEN_BIN"
+    exit 1
+fi

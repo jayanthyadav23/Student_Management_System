@@ -1,0 +1,743 @@
+{
+  "info": {
+    "name": "Student Management System API",
+    "_postman_id": "sms-prod-collection-v2-1",
+    "description": "Comprehensive Postman collection for the Student Management System (SMS) Spring Boot 3.3 REST API with JWT authentication and role-based access control.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01. System & Health",
+      "item": [
+        {
+          "name": "System Health & Neon DB Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02. Authentication",
+      "item": [
+        {
+          "name": "Admin Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data && jsonData.data.token) {",
+                  "    pm.collectionVariables.set('token', jsonData.data.token);",
+                  "    console.log('JWT Token saved to collection variable.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@sms.com\",\n  \"password\": \"Admin@123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Register Student",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data && jsonData.data.token) {",
+                  "    pm.collectionVariables.set('token', jsonData.data.token);",
+                  "    console.log('Registered student JWT saved to collection variable.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Grace Hopper\",\n  \"email\": \"grace.hopper@sms.com\",\n  \"rollNumber\": \"CS2026099\",\n  \"departmentId\": 1,\n  \"semester\": 1,\n  \"age\": 20,\n  \"password\": \"Student@123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Get Public Departments for Registration",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/departments",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "departments"]
+            }
+          }
+        },
+        {
+          "name": "Get Current User Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "me"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03. Admin - Departments",
+      "item": [
+        {
+          "name": "Get Departments (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/departments?page=0&size=10&sortBy=name&sortDir=asc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "departments"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" },
+                { "key": "sortBy", "value": "name" },
+                { "key": "sortDir", "value": "asc" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get All Departments (Dropdown)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/departments/all",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "departments", "all"]
+            }
+          }
+        },
+        {
+          "name": "Create Department",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Computer Science and Engineering\",\n  \"code\": \"CSE\",\n  \"description\": \"Department of Computing & Information Science\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/departments",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "departments"]
+            }
+          }
+        },
+        {
+          "name": "Update Department",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Computer Science & AI\",\n  \"code\": \"CSAI\",\n  \"description\": \"Advanced Computer Science & Intelligent Systems\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/departments/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "departments", "1"]
+            }
+          }
+        },
+        {
+          "name": "Delete Department",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/departments/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "departments", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04. Admin - Faculty",
+      "item": [
+        {
+          "name": "Get Faculty (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/faculty?page=0&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "faculty"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Faculty",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Alan\",\n  \"lastName\": \"Turing\",\n  \"email\": \"alan.turing@sms.com\",\n  \"password\": \"Faculty@123\",\n  \"phone\": \"+1-555-010-9988\",\n  \"designation\": \"Professor\",\n  \"departmentId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/faculty",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "faculty"]
+            }
+          }
+        },
+        {
+          "name": "Update Faculty",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Alan\",\n  \"lastName\": \"Turing\",\n  \"phone\": \"+1-555-010-9900\",\n  \"designation\": \"Distinguished Professor\",\n  \"departmentId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/faculty/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "faculty", "1"]
+            }
+          }
+        },
+        {
+          "name": "Delete Faculty",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/faculty/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "faculty", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "05. Admin - Courses",
+      "item": [
+        {
+          "name": "Get Courses (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/courses?page=0&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "courses"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Course",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"CS101\",\n  \"title\": \"Data Structures and Algorithms\",\n  \"description\": \"Core fundamentals of algorithm design and asymptotic complexity.\",\n  \"credits\": 4,\n  \"semester\": 1,\n  \"departmentId\": 1,\n  \"facultyId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/courses",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "courses"]
+            }
+          }
+        },
+        {
+          "name": "Assign Faculty to Course",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"facultyId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/courses/1/assign-faculty",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "courses", "1", "assign-faculty"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "06. Admin - Students & Enrollments",
+      "item": [
+        {
+          "name": "Get Students (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/students?page=0&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "students"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Admit Student",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rollNumber\": \"CS2026001\",\n  \"firstName\": \"Ada\",\n  \"lastName\": \"Lovelace\",\n  \"email\": \"ada.lovelace@sms.com\",\n  \"password\": \"Student@123\",\n  \"phone\": \"+1-555-019-1122\",\n  \"departmentId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/students",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "students"]
+            }
+          }
+        },
+        {
+          "name": "Enroll Student in Course",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": 1,\n  \"courseId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/students/enroll",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "students", "enroll"]
+            }
+          }
+        },
+        {
+          "name": "Get Student Enrollments",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/students/1/enrollments",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "students", "1", "enrollments"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "07. Admin - Dashboard & Controls",
+      "item": [
+        {
+          "name": "Get Admin Dashboard Metrics",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/dashboard",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "dashboard"]
+            }
+          }
+        },
+        {
+          "name": "Toggle User Account Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"enabled\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/1/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "users", "1", "status"]
+            }
+          }
+        },
+        {
+          "name": "Reset User Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"newPassword\": \"NewPassword@123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/1/reset-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "users", "1", "reset-password"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "08. Faculty Portal",
+      "item": [
+        {
+          "name": "Get Assigned Courses",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/faculty/courses",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "faculty", "courses"]
+            }
+          }
+        },
+        {
+          "name": "Get Course Attendance Sheet",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/faculty/courses/1/attendance?date=2026-10-10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "faculty", "courses", "1", "attendance"],
+              "query": [
+                { "key": "date", "value": "2026-10-10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Record Bulk Attendance",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2026-10-10\",\n  \"entries\": [\n    {\n      \"enrollmentId\": 1,\n      \"status\": \"PRESENT\",\n      \"remarks\": \"Active participant\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/faculty/courses/1/attendance",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "faculty", "courses", "1", "attendance"]
+            }
+          }
+        },
+        {
+          "name": "Get Course Marks Sheet",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/faculty/courses/1/marks?examType=MIDTERM",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "faculty", "courses", "1", "marks"],
+              "query": [
+                { "key": "examType", "value": "MIDTERM" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Submit Batch Marks",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"examType\": \"MIDTERM\",\n  \"maxMarks\": 50,\n  \"entries\": [\n    {\n      \"enrollmentId\": 1,\n      \"marksObtained\": 46.5,\n      \"remarks\": \"Excellent work\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/faculty/courses/1/marks/batch",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "faculty", "courses", "1", "marks", "batch"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "09. Student Portal",
+      "item": [
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/student/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "student", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Get My Attendance Breakdown",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/student/attendance",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "student", "attendance"]
+            }
+          }
+        },
+        {
+          "name": "Get My Results & Grades",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/student/results",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "student", "results"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. Reports & CSV Exports",
+      "item": [
+        {
+          "name": "Get Attendance Audit Report",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/courses/1/attendance?below75Only=false",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports", "courses", "1", "attendance"],
+              "query": [
+                { "key": "below75Only", "value": "false" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Export Attendance CSV",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/courses/1/attendance/export?below75Only=false",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports", "courses", "1", "attendance", "export"],
+              "query": [
+                { "key": "below75Only", "value": "false" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Results Report",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/courses/1/results",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports", "courses", "1", "results"]
+            }
+          }
+        },
+        {
+          "name": "Export Results CSV",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/courses/1/results/export",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports", "courses", "1", "results", "export"]
+            }
+          }
+        },
+        {
+          "name": "Get Course Performance Histogram",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/courses/1/performance",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports", "courses", "1", "performance"]
+            }
+          }
+        },
+        {
+          "name": "Export Performance CSV",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/courses/1/performance/export",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports", "courses", "1", "performance", "export"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
