@@ -177,10 +177,8 @@ class AuthenticationTests {
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.token").isNotEmpty())
-                .andExpect(jsonPath("$.data.email").value(uniqueEmail))
-                .andExpect(jsonPath("$.data.role").value("ADMIN"));
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Direct registration as ADMIN is prohibited. Administrator accounts must be provisioned by institutional initialization."));
     }
 }
