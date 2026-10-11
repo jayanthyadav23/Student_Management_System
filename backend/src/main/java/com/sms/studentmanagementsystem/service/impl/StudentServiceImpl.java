@@ -9,9 +9,11 @@ import com.sms.studentmanagementsystem.dto.student.StudentUpdateRequest;
 import com.sms.studentmanagementsystem.entity.*;
 import com.sms.studentmanagementsystem.exception.DuplicateResourceException;
 import com.sms.studentmanagementsystem.exception.ResourceNotFoundException;
+import com.sms.studentmanagementsystem.repository.AttendanceRepository;
 import com.sms.studentmanagementsystem.repository.CourseRepository;
 import com.sms.studentmanagementsystem.repository.DepartmentRepository;
 import com.sms.studentmanagementsystem.repository.EnrollmentRepository;
+import com.sms.studentmanagementsystem.repository.MarkRepository;
 import com.sms.studentmanagementsystem.repository.StudentRepository;
 import com.sms.studentmanagementsystem.repository.UserRepository;
 import com.sms.studentmanagementsystem.service.StudentService;
@@ -33,6 +35,9 @@ public class StudentServiceImpl implements StudentService {
     private final DepartmentRepository departmentRepository;
     private final CourseRepository courseRepository;
     private final EnrollmentRepository enrollmentRepository;
+    private final AttendanceRepository attendanceRepository;
+    private final MarkRepository markRepository;
+    private final com.sms.studentmanagementsystem.service.AuditLogService auditLogService;
     private final PasswordEncoder passwordEncoder;
 
     public StudentServiceImpl(StudentRepository studentRepository,
@@ -40,12 +45,18 @@ public class StudentServiceImpl implements StudentService {
                               DepartmentRepository departmentRepository,
                               CourseRepository courseRepository,
                               EnrollmentRepository enrollmentRepository,
+                              AttendanceRepository attendanceRepository,
+                              MarkRepository markRepository,
+                              com.sms.studentmanagementsystem.service.AuditLogService auditLogService,
                               PasswordEncoder passwordEncoder) {
         this.studentRepository = studentRepository;
         this.userRepository = userRepository;
         this.departmentRepository = departmentRepository;
         this.courseRepository = courseRepository;
         this.enrollmentRepository = enrollmentRepository;
+        this.attendanceRepository = attendanceRepository;
+        this.markRepository = markRepository;
+        this.auditLogService = auditLogService;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -83,7 +94,21 @@ public class StudentServiceImpl implements StudentService {
                 request.semester()
         );
 
+        if (request.academicYear() != null && !request.academicYear().isBlank()) {
+            student.setAcademicYear(request.academicYear().trim());
+        }
+        if (request.status() != null && !request.status().isBlank()) {
+            student.setStatus(request.status().trim().toUpperCase());
+        }
+        if (request.phone() != null) {
+            student.setPhone(request.phone().trim());
+        }
+        if (request.address() != null) {
+            student.setAddress(request.address().trim());
+        }
+
         Student savedStudent = studentRepository.save(student);
+        auditLogService.logAction("CREATE_STUDENT", "Admin", "Student " + cleanRollNumber, "Enrolled student: " + savedStudent.getName());
         return mapToResponse(savedStudent);
     }
 
@@ -139,7 +164,21 @@ public class StudentServiceImpl implements StudentService {
         student.setDepartment(department);
         student.setSemester(request.semester());
 
+        if (request.academicYear() != null && !request.academicYear().isBlank()) {
+            student.setAcademicYear(request.academicYear().trim());
+        }
+        if (request.status() != null && !request.status().isBlank()) {
+            student.setStatus(request.status().trim().toUpperCase());
+        }
+        if (request.phone() != null) {
+            student.setPhone(request.phone().trim());
+        }
+        if (request.address() != null) {
+            student.setAddress(request.address().trim());
+        }
+
         Student updated = studentRepository.save(student);
+        auditLogService.logAction("UPDATE_STUDENT", "Admin", "Student " + cleanRollNumber, "Updated profile for: " + updated.getName());
         return mapToResponse(updated);
     }
 
@@ -149,9 +188,58 @@ public class StudentServiceImpl implements StudentService {
         Student student = studentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Student", "id", id));
 
+        // Safely cascade delete student attendance, marks, and enrollments
+        List<Enrollment> enrollments = enrollmentRepository.findByStudentId(id);
+        for (Enrollment enrollment : enrollments) {
+            attendanceRepository.deleteAll(attendanceRepository.findByEnrollmentIdOrderByDateDesc(enrollment.getId()));
+            markRepository.deleteAll(markRepository.findByEnrollmentId(enrollment.getId()));
+            enrollmentRepository.delete(enrollment);
+        }
+
         User user = student.getUser();
+        String studentName = student.getName();
+        String roll = student.getRollNumber();
+
         studentRepository.delete(student);
-        userRepository.delete(user);
+        if (user != null) {
+            userRepository.delete(user);
+        }
+
+        auditLogService.logAction("DELETE_STUDENT", "Admin", "Student " + roll, "Deleted student: " + studentName);
+    }
+
+    @Override
+    @Transactional
+    public StudentResponse toggleStudentStatus(Long id) {
+        Student student = studentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Student", "id", id));
+
+        String currentStatus = student.getStatus();
+        String nextStatus = "ACTIVE".equalsIgnoreCase(currentStatus) ? "INACTIVE" : "ACTIVE";
+        student.setStatus(nextStatus);
+
+        if (student.getUser() != null) {
+            student.getUser().setEnabled("ACTIVE".equalsIgnoreCase(nextStatus));
+            userRepository.save(student.getUser());
+        }
+
+        Student saved = studentRepository.save(student);
+        auditLogService.logAction("STATUS_CHANGE", "Admin", "Student " + student.getRollNumber(), "Changed status to: " + nextStatus);
+        return mapToResponse(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<StudentResponse> getAllStudentsList(String search, Long departmentId, Integer semester) {
+        List<Student> list;
+        if (search != null && !search.trim().isEmpty()) {
+            list = studentRepository.searchStudents(search.trim(), PageRequest.of(0, 1000)).getContent();
+        } else if (departmentId != null) {
+            list = studentRepository.findByDepartmentId(departmentId, PageRequest.of(0, 1000)).getContent();
+        } else {
+            list = studentRepository.findAll();
+        }
+        return list.stream().map(this::mapToResponse).toList();
     }
 
     @Override
@@ -181,6 +269,7 @@ public class StudentServiceImpl implements StudentService {
         Enrollment enrollment = new Enrollment(student, course);
         Enrollment saved = enrollmentRepository.save(enrollment);
 
+        auditLogService.logAction("COURSE_ENROLL", "Admin", "Course " + course.getCode(), "Enrolled " + student.getName() + " into " + course.getTitle());
         return mapToEnrollmentResponse(saved);
     }
 
@@ -190,7 +279,11 @@ public class StudentServiceImpl implements StudentService {
         Enrollment enrollment = enrollmentRepository.findByStudentIdAndCourseId(studentId, courseId)
                 .orElseThrow(() -> new ResourceNotFoundException("Enrollment record not found for student " + studentId + " in course " + courseId));
 
+        attendanceRepository.deleteAll(attendanceRepository.findByEnrollmentIdOrderByDateDesc(enrollment.getId()));
+        markRepository.deleteAll(markRepository.findByEnrollmentId(enrollment.getId()));
         enrollmentRepository.delete(enrollment);
+
+        auditLogService.logAction("COURSE_UNENROLL", "Admin", "Course " + courseId, "Unenrolled student " + studentId);
     }
 
     private StudentResponse mapToResponse(Student student) {
@@ -207,6 +300,10 @@ public class StudentServiceImpl implements StudentService {
                 student.getDepartment().getName(),
                 student.getDepartment().getCode(),
                 student.getSemester(),
+                student.getAcademicYear(),
+                student.getStatus(),
+                student.getPhone(),
+                student.getAddress(),
                 student.getEnrollmentDate(),
                 student.getUser().isEnabled(),
                 enrolledCount

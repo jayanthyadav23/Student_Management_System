@@ -10,6 +10,8 @@ export const studentApi = {
   getEnrollments: (studentId) => api.get(`/api/admin/students/${studentId}/enrollments`),
   enroll: (data) => api.post('/api/admin/students/enroll', data),
   unenroll: (studentId, courseId) => api.delete(`/api/admin/students/${studentId}/courses/${courseId}`),
+  toggleStatus: (id) => api.patch(`/api/admin/students/${id}/toggle-status`),
+  getAllList: (params) => api.get('/api/admin/students/all', { params }),
 
   // Student self-service endpoints
   getMyProfile: () => api.get('/api/student/profile'),

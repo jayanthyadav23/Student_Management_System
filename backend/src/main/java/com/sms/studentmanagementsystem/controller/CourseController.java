@@ -80,4 +80,33 @@ public class CourseController {
         courseService.deleteCourse(id);
         return ResponseEntity.ok(ApiResponse.success("Course deleted successfully", null));
     }
+
+    @PatchMapping("/{id}/toggle-status")
+    public ResponseEntity<ApiResponse<CourseResponse>> toggleCourseStatus(@PathVariable Long id) {
+        CourseResponse response = courseService.toggleCourseStatus(id);
+        return ResponseEntity.ok(ApiResponse.success("Course status updated successfully", response));
+    }
+
+    @GetMapping("/{id}/students")
+    public ResponseEntity<ApiResponse<List<com.sms.studentmanagementsystem.dto.enrollment.EnrollmentResponse>>> getCourseEnrollments(@PathVariable Long id) {
+        List<com.sms.studentmanagementsystem.dto.enrollment.EnrollmentResponse> list = courseService.getCourseEnrollments(id);
+        return ResponseEntity.ok(ApiResponse.success("Course enrolled students retrieved", list));
+    }
+
+    @PostMapping("/{id}/students/{studentId}")
+    public ResponseEntity<ApiResponse<com.sms.studentmanagementsystem.dto.enrollment.EnrollmentResponse>> enrollStudentToCourse(
+            @PathVariable Long id,
+            @PathVariable Long studentId) {
+        com.sms.studentmanagementsystem.dto.enrollment.EnrollmentResponse response = courseService.enrollStudentToCourse(id, studentId);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Student enrolled in course", response));
+    }
+
+    @DeleteMapping("/{id}/students/{studentId}")
+    public ResponseEntity<ApiResponse<Void>> removeStudentFromCourse(
+            @PathVariable Long id,
+            @PathVariable Long studentId) {
+        courseService.removeStudentFromCourse(id, studentId);
+        return ResponseEntity.ok(ApiResponse.success("Student removed from course", null));
+    }
 }

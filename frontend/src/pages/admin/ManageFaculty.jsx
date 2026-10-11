@@ -5,7 +5,19 @@ import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import { useToast } from '../../context/ToastContext';
-import { Users2, Plus, Edit2, Trash2, Mail, Building2 } from 'lucide-react';
+import {
+  Users2,
+  Plus,
+  Edit2,
+  Trash2,
+  Mail,
+  Building2,
+  CheckCircle,
+  XCircle,
+  Phone,
+  DoorOpen,
+  Sparkles,
+} from 'lucide-react';
 
 const ManageFaculty = () => {
   const [facultyList, setFacultyList] = useState([]);
@@ -29,6 +41,9 @@ const ManageFaculty = () => {
     password: '',
     designation: 'Assistant Professor',
     departmentId: '',
+    specialization: '',
+    phone: '',
+    officeRoom: '',
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -89,6 +104,9 @@ const ManageFaculty = () => {
       password: '',
       designation: 'Assistant Professor',
       departmentId: departments.length > 0 ? departments[0].id : '',
+      specialization: '',
+      phone: '',
+      officeRoom: '',
     });
     setIsModalOpen(true);
   };
@@ -101,8 +119,21 @@ const ManageFaculty = () => {
       password: '',
       designation: fac.designation || 'Assistant Professor',
       departmentId: fac.departmentId || '',
+      specialization: fac.specialization || '',
+      phone: fac.phone || '',
+      officeRoom: fac.officeRoom || '',
     });
     setIsModalOpen(true);
+  };
+
+  const handleToggleStatus = async (faculty) => {
+    try {
+      await facultyApi.toggleStatus(faculty.id);
+      showSuccess(`Status toggled for ${faculty.name}`);
+      fetchFaculty();
+    } catch (err) {
+      showError(err.response?.data?.message || 'Failed to toggle faculty status.');
+    }
   };
 
   const handleFormSubmit = async (e) => {
@@ -119,6 +150,9 @@ const ManageFaculty = () => {
           name: formData.name.trim(),
           designation: formData.designation,
           departmentId: Number(formData.departmentId),
+          specialization: formData.specialization?.trim(),
+          phone: formData.phone?.trim(),
+          officeRoom: formData.officeRoom?.trim(),
         });
         showSuccess('Faculty profile updated successfully.');
       } else {
@@ -133,6 +167,9 @@ const ManageFaculty = () => {
           password: formData.password,
           designation: formData.designation,
           departmentId: Number(formData.departmentId),
+          specialization: formData.specialization?.trim(),
+          phone: formData.phone?.trim(),
+          officeRoom: formData.officeRoom?.trim(),
         });
         showSuccess('Faculty member onboarded successfully.');
       }
@@ -189,26 +226,73 @@ const ManageFaculty = () => {
     },
     {
       key: 'departmentName',
-      header: 'Department',
+      header: 'Department & Spec',
       render: (row) => (
-        <div className="flex items-center gap-1.5 text-xs font-medium text-slate-700">
-          <Building2 className="w-3.5 h-3.5 text-slate-400" />
-          <span>{row.departmentName}</span>
-          <span className="text-slate-400 font-mono text-[10px]">({row.departmentCode})</span>
+        <div>
+          <div className="flex items-center gap-1.5 text-xs font-medium text-slate-700">
+            <Building2 className="w-3.5 h-3.5 text-slate-400" />
+            <span>{row.departmentName}</span>
+          </div>
+          {row.specialization && (
+            <div className="text-[11px] text-indigo-600 font-medium flex items-center gap-1 mt-0.5">
+              <Sparkles className="w-3 h-3" />
+              {row.specialization}
+            </div>
+          )}
         </div>
       ),
     },
     {
       key: 'email',
-      header: 'Email / Account',
+      header: 'Contact Info',
       render: (row) => (
         <div className="space-y-0.5 text-xs">
           <div className="flex items-center gap-1.5 text-slate-600">
             <Mail className="w-3.5 h-3.5 text-slate-400" />
             <span>{row.email}</span>
           </div>
+          {row.phone && (
+            <div className="flex items-center gap-1.5 text-slate-400 text-[11px]">
+              <Phone className="w-3 h-3" />
+              <span>{row.phone}</span>
+            </div>
+          )}
+          {row.officeRoom && (
+            <div className="flex items-center gap-1.5 text-slate-400 text-[11px]">
+              <DoorOpen className="w-3 h-3" />
+              <span>{row.officeRoom}</span>
+            </div>
+          )}
         </div>
       ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (row) => {
+        const isActive = row.status !== 'INACTIVE';
+        return (
+          <button
+            onClick={() => handleToggleStatus(row)}
+            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold cursor-pointer transition-all ${
+              isActive
+                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60 hover:bg-emerald-100'
+                : 'bg-rose-50 text-rose-700 border border-rose-200/60 hover:bg-rose-100'
+            }`}
+            title="Click to toggle status"
+          >
+            {isActive ? (
+              <>
+                <CheckCircle className="w-3 h-3" /> Active
+              </>
+            ) : (
+              <>
+                <XCircle className="w-3 h-3" /> Inactive
+              </>
+            )}
+          </button>
+        );
+      },
     },
     {
       key: 'assignedCoursesCount',
@@ -256,7 +340,7 @@ const ManageFaculty = () => {
             Faculty Directory
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Manage academic instructors, department mappings, and teaching assignments.
+            Manage academic instructors, department mappings, specializations, and teaching assignments.
           </p>
         </div>
         <button
@@ -398,6 +482,45 @@ const ManageFaculty = () => {
                   </option>
                 ))}
               </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
+                Specialization
+              </label>
+              <input
+                type="text"
+                value={formData.specialization}
+                onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
+                placeholder="e.g. AI / Machine Learning"
+                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
+                Phone
+              </label>
+              <input
+                type="text"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                placeholder="+1 555-019-8888"
+                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
+                Office / Cabin
+              </label>
+              <input
+                type="text"
+                value={formData.officeRoom}
+                onChange={(e) => setFormData({ ...formData, officeRoom: e.target.value })}
+                placeholder="e.g. CS Block #302"
+                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              />
             </div>
           </div>
 

@@ -31,15 +31,27 @@ public class CourseServiceImpl implements CourseService {
     private final DepartmentRepository departmentRepository;
     private final FacultyRepository facultyRepository;
     private final EnrollmentRepository enrollmentRepository;
+    private final com.sms.studentmanagementsystem.repository.StudentRepository studentRepository;
+    private final com.sms.studentmanagementsystem.repository.AttendanceRepository attendanceRepository;
+    private final com.sms.studentmanagementsystem.repository.MarkRepository markRepository;
+    private final com.sms.studentmanagementsystem.service.AuditLogService auditLogService;
 
     public CourseServiceImpl(CourseRepository courseRepository,
                              DepartmentRepository departmentRepository,
                              FacultyRepository facultyRepository,
-                             EnrollmentRepository enrollmentRepository) {
+                             EnrollmentRepository enrollmentRepository,
+                             com.sms.studentmanagementsystem.repository.StudentRepository studentRepository,
+                             com.sms.studentmanagementsystem.repository.AttendanceRepository attendanceRepository,
+                             com.sms.studentmanagementsystem.repository.MarkRepository markRepository,
+                             com.sms.studentmanagementsystem.service.AuditLogService auditLogService) {
         this.courseRepository = courseRepository;
         this.departmentRepository = departmentRepository;
         this.facultyRepository = facultyRepository;
         this.enrollmentRepository = enrollmentRepository;
+        this.studentRepository = studentRepository;
+        this.attendanceRepository = attendanceRepository;
+        this.markRepository = markRepository;
+        this.auditLogService = auditLogService;
     }
 
     @Override
@@ -69,7 +81,18 @@ public class CourseServiceImpl implements CourseService {
                 request.semester()
         );
 
+        if (request.description() != null) {
+            course.setDescription(request.description().trim());
+        }
+        if (request.academicYear() != null && !request.academicYear().isBlank()) {
+            course.setAcademicYear(request.academicYear().trim());
+        }
+        if (request.status() != null && !request.status().isBlank()) {
+            course.setStatus(request.status().trim().toUpperCase());
+        }
+
         Course saved = courseRepository.save(course);
+        auditLogService.logAction("CREATE_COURSE", "Admin", "Course " + cleanCode, "Created course: " + saved.getTitle());
         return mapToResponse(saved);
     }
 
@@ -147,7 +170,18 @@ public class CourseServiceImpl implements CourseService {
         course.setFaculty(faculty);
         course.setSemester(request.semester());
 
+        if (request.description() != null) {
+            course.setDescription(request.description().trim());
+        }
+        if (request.academicYear() != null && !request.academicYear().isBlank()) {
+            course.setAcademicYear(request.academicYear().trim());
+        }
+        if (request.status() != null && !request.status().isBlank()) {
+            course.setStatus(request.status().trim().toUpperCase());
+        }
+
         Course updated = courseRepository.save(course);
+        auditLogService.logAction("UPDATE_COURSE", "Admin", "Course " + cleanCode, "Updated course: " + updated.getTitle());
         return mapToResponse(updated);
     }
 
@@ -166,7 +200,67 @@ public class CourseServiceImpl implements CourseService {
         }
 
         Course updated = courseRepository.save(course);
+        auditLogService.logAction("ASSIGN_FACULTY", "Admin", "Course " + course.getCode(), "Assigned faculty to: " + course.getTitle());
         return mapToResponse(updated);
+    }
+
+    @Override
+    @Transactional
+    public CourseResponse toggleCourseStatus(Long id) {
+        Course course = courseRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Course", "id", id));
+
+        String currentStatus = course.getStatus();
+        String nextStatus = "ACTIVE".equalsIgnoreCase(currentStatus) ? "ARCHIVED" : "ACTIVE";
+        course.setStatus(nextStatus);
+
+        Course saved = courseRepository.save(course);
+        auditLogService.logAction("STATUS_CHANGE", "Admin", "Course " + course.getCode(), "Changed status to: " + nextStatus);
+        return mapToResponse(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<com.sms.studentmanagementsystem.dto.enrollment.EnrollmentResponse> getCourseEnrollments(Long courseId) {
+        if (!courseRepository.existsById(courseId)) {
+            throw new ResourceNotFoundException("Course", "id", courseId);
+        }
+
+        List<com.sms.studentmanagementsystem.entity.Enrollment> enrollments = enrollmentRepository.findByCourseId(courseId);
+        return enrollments.stream().map(this::mapToEnrollmentResponse).toList();
+    }
+
+    @Override
+    @Transactional
+    public com.sms.studentmanagementsystem.dto.enrollment.EnrollmentResponse enrollStudentToCourse(Long courseId, Long studentId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Course", "id", courseId));
+
+        com.sms.studentmanagementsystem.entity.Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student", "id", studentId));
+
+        if (enrollmentRepository.existsByStudentIdAndCourseId(studentId, courseId)) {
+            throw new DuplicateResourceException("Student is already enrolled in course '" + course.getCode() + "'");
+        }
+
+        com.sms.studentmanagementsystem.entity.Enrollment enrollment = new com.sms.studentmanagementsystem.entity.Enrollment(student, course);
+        com.sms.studentmanagementsystem.entity.Enrollment saved = enrollmentRepository.save(enrollment);
+
+        auditLogService.logAction("COURSE_ENROLL", "Admin", "Course " + course.getCode(), "Enrolled student " + student.getRollNumber());
+        return mapToEnrollmentResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public void removeStudentFromCourse(Long courseId, Long studentId) {
+        com.sms.studentmanagementsystem.entity.Enrollment enrollment = enrollmentRepository.findByStudentIdAndCourseId(studentId, courseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Enrollment record not found for student " + studentId + " in course " + courseId));
+
+        attendanceRepository.deleteAll(attendanceRepository.findByEnrollmentIdOrderByDateDesc(enrollment.getId()));
+        markRepository.deleteAll(markRepository.findByEnrollmentId(enrollment.getId()));
+        enrollmentRepository.delete(enrollment);
+
+        auditLogService.logAction("COURSE_UNENROLL", "Admin", "Course " + courseId, "Removed student " + studentId);
     }
 
     @Override
@@ -175,13 +269,16 @@ public class CourseServiceImpl implements CourseService {
         Course course = courseRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Course", "id", id));
 
-        long enrolledCount = enrollmentRepository.countByCourseId(id);
-        if (enrolledCount > 0) {
-            throw new BadRequestException("Cannot delete course '" + course.getTitle() + "' because "
-                    + enrolledCount + " student(s) are actively enrolled in it.");
+        // Cascade delete enrollments, attendance, and marks safely
+        List<com.sms.studentmanagementsystem.entity.Enrollment> enrollments = enrollmentRepository.findByCourseId(id);
+        for (com.sms.studentmanagementsystem.entity.Enrollment e : enrollments) {
+            attendanceRepository.deleteAll(attendanceRepository.findByEnrollmentIdOrderByDateDesc(e.getId()));
+            markRepository.deleteAll(markRepository.findByEnrollmentId(e.getId()));
+            enrollmentRepository.delete(e);
         }
 
         courseRepository.delete(course);
+        auditLogService.logAction("DELETE_COURSE", "Admin", "Course " + course.getCode(), "Deleted course: " + course.getTitle());
     }
 
     private CourseResponse mapToResponse(Course course) {
@@ -194,6 +291,7 @@ public class CourseServiceImpl implements CourseService {
                 course.getId(),
                 course.getCode(),
                 course.getTitle(),
+                course.getDescription(),
                 course.getCredits(),
                 course.getDepartment().getId(),
                 course.getDepartment().getName(),
@@ -201,7 +299,28 @@ public class CourseServiceImpl implements CourseService {
                 facultyId,
                 facultyName,
                 course.getSemester(),
+                course.getAcademicYear(),
+                course.getStatus(),
                 enrolledCount
+        );
+    }
+
+    private com.sms.studentmanagementsystem.dto.enrollment.EnrollmentResponse mapToEnrollmentResponse(com.sms.studentmanagementsystem.entity.Enrollment enrollment) {
+        Course course = enrollment.getCourse();
+        com.sms.studentmanagementsystem.entity.Student student = enrollment.getStudent();
+        String facultyName = course.getFaculty() != null ? course.getFaculty().getName() : "Unassigned";
+
+        return new com.sms.studentmanagementsystem.dto.enrollment.EnrollmentResponse(
+                enrollment.getId(),
+                student.getId(),
+                student.getRollNumber(),
+                student.getName(),
+                course.getId(),
+                course.getCode(),
+                course.getTitle(),
+                course.getCredits(),
+                facultyName,
+                course.getSemester()
         );
     }
 }

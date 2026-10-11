@@ -6,6 +6,9 @@ import {
   Building2,
   Users2,
   BookOpen,
+  Layers,
+  Calendar,
+  Megaphone,
   GraduationCap,
   CalendarCheck,
   Award,
@@ -23,12 +26,17 @@ const Sidebar = ({ isOpen, onClose }) => {
         { to: '/admin/departments', label: 'Departments', icon: Building2 },
         { to: '/admin/faculty', label: 'Faculty', icon: Users2 },
         { to: '/admin/courses', label: 'Courses', icon: BookOpen },
+        { to: '/admin/subjects', label: 'Subjects', icon: Layers },
+        { to: '/admin/timetable', label: 'Timetable', icon: Calendar },
+        { to: '/admin/announcements', label: 'Announcements', icon: Megaphone },
         { to: '/admin/students', label: 'Students', icon: GraduationCap },
         { to: '/admin/reports', label: 'Reports', icon: BarChart3 },
       ];
     } else if (role === 'FACULTY') {
       return [
         { to: '/faculty', label: 'Dashboard', icon: LayoutDashboard },
+        { to: '/faculty/timetable', label: 'Timetable', icon: Calendar },
+        { to: '/faculty/announcements', label: 'Announcements', icon: Megaphone },
         { to: '/faculty/attendance', label: 'Attendance', icon: CalendarCheck },
         { to: '/faculty/marks', label: 'Marks Entry', icon: Award },
         { to: '/faculty/reports', label: 'Reports', icon: BarChart3 },
@@ -36,6 +44,8 @@ const Sidebar = ({ isOpen, onClose }) => {
     } else if (role === 'STUDENT') {
       return [
         { to: '/student', label: 'My Dashboard', icon: LayoutDashboard },
+        { to: '/student/timetable', label: 'My Timetable', icon: Calendar },
+        { to: '/student/announcements', label: 'Announcements', icon: Megaphone },
         { to: '/student/attendance', label: 'My Attendance', icon: CalendarCheck },
         { to: '/student/results', label: 'My Results', icon: Award },
       ];
@@ -80,7 +90,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         </div>
 
         {/* Navigation Section */}
-        <div className="flex-1 space-y-1">
+        <div className="flex-1 space-y-1 overflow-y-auto pr-1">
           <p className="px-3 pb-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
             {role ? `${role} Portal` : 'Navigation'}
           </p>

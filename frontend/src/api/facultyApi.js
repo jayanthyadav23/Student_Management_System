@@ -7,5 +7,6 @@ export const facultyApi = {
   getAllDropdown: (departmentId) =>
     api.get('/api/admin/faculty/all', { params: { departmentId } }),
   update: (id, data) => api.put(`/api/admin/faculty/${id}`, data),
+  toggleStatus: (id) => api.patch(`/api/admin/faculty/${id}/toggle-status`),
   delete: (id) => api.delete(`/api/admin/faculty/${id}`),
 };

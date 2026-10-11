@@ -26,6 +26,18 @@ public class Faculty {
     @Column(nullable = false, length = 100)
     private String designation;
 
+    @Column(length = 150)
+    private String specialization = "General";
+
+    @Column(nullable = false, length = 20)
+    private String status = "ACTIVE";
+
+    @Column(length = 25)
+    private String phone;
+
+    @Column(name = "office_room", length = 50)
+    private String officeRoom;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "department_id", nullable = false)
     private Department department;
@@ -70,6 +82,38 @@ public class Faculty {
 
     public void setDesignation(String designation) {
         this.designation = designation;
+    }
+
+    public String getSpecialization() {
+        return specialization;
+    }
+
+    public void setSpecialization(String specialization) {
+        this.specialization = specialization;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public String getOfficeRoom() {
+        return officeRoom;
+    }
+
+    public void setOfficeRoom(String officeRoom) {
+        this.officeRoom = officeRoom;
     }
 
     public Department getDepartment() {

@@ -23,5 +23,9 @@ public record FacultyCreateRequest(
         String designation,
 
         @NotNull(message = "Department ID is required")
-        Long departmentId
+        Long departmentId,
+
+        String specialization,
+        String phone,
+        String officeRoom
 ) {}

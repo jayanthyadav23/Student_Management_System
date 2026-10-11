@@ -37,6 +37,15 @@ public class Course {
     @Column(nullable = false)
     private Integer semester;
 
+    @Column(length = 1000)
+    private String description;
+
+    @Column(name = "academic_year", length = 20)
+    private String academicYear = "2025-2026";
+
+    @Column(nullable = false, length = 20)
+    private String status = "ACTIVE";
+
     public Course() {
     }
 
@@ -103,5 +112,29 @@ public class Course {
 
     public void setSemester(Integer semester) {
         this.semester = semester;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getAcademicYear() {
+        return academicYear;
+    }
+
+    public void setAcademicYear(String academicYear) {
+        this.academicYear = academicYear;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 }

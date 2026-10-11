@@ -33,17 +33,23 @@ public class FacultyServiceImpl implements FacultyService {
     private final UserRepository userRepository;
     private final DepartmentRepository departmentRepository;
     private final CourseRepository courseRepository;
+    private final com.sms.studentmanagementsystem.repository.SubjectRepository subjectRepository;
+    private final com.sms.studentmanagementsystem.service.AuditLogService auditLogService;
     private final PasswordEncoder passwordEncoder;
 
     public FacultyServiceImpl(FacultyRepository facultyRepository,
                               UserRepository userRepository,
                               DepartmentRepository departmentRepository,
                               CourseRepository courseRepository,
+                              com.sms.studentmanagementsystem.repository.SubjectRepository subjectRepository,
+                              com.sms.studentmanagementsystem.service.AuditLogService auditLogService,
                               PasswordEncoder passwordEncoder) {
         this.facultyRepository = facultyRepository;
         this.userRepository = userRepository;
         this.departmentRepository = departmentRepository;
         this.courseRepository = courseRepository;
+        this.subjectRepository = subjectRepository;
+        this.auditLogService = auditLogService;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -73,8 +79,19 @@ public class FacultyServiceImpl implements FacultyService {
                 request.designation().trim(),
                 department
         );
-        Faculty savedFaculty = facultyRepository.save(faculty);
 
+        if (request.specialization() != null && !request.specialization().isBlank()) {
+            faculty.setSpecialization(request.specialization().trim());
+        }
+        if (request.phone() != null) {
+            faculty.setPhone(request.phone().trim());
+        }
+        if (request.officeRoom() != null) {
+            faculty.setOfficeRoom(request.officeRoom().trim());
+        }
+
+        Faculty savedFaculty = facultyRepository.save(faculty);
+        auditLogService.logAction("CREATE_FACULTY", "Admin", "Faculty " + savedFaculty.getName(), "Added faculty member: " + savedFaculty.getName());
         return mapToResponse(savedFaculty);
     }
 
@@ -139,7 +156,21 @@ public class FacultyServiceImpl implements FacultyService {
         faculty.setDesignation(request.designation().trim());
         faculty.setDepartment(department);
 
+        if (request.specialization() != null && !request.specialization().isBlank()) {
+            faculty.setSpecialization(request.specialization().trim());
+        }
+        if (request.status() != null && !request.status().isBlank()) {
+            faculty.setStatus(request.status().trim().toUpperCase());
+        }
+        if (request.phone() != null) {
+            faculty.setPhone(request.phone().trim());
+        }
+        if (request.officeRoom() != null) {
+            faculty.setOfficeRoom(request.officeRoom().trim());
+        }
+
         Faculty updated = facultyRepository.save(faculty);
+        auditLogService.logAction("UPDATE_FACULTY", "Admin", "Faculty " + updated.getName(), "Updated profile for: " + updated.getName());
         return mapToResponse(updated);
     }
 
@@ -155,13 +186,45 @@ public class FacultyServiceImpl implements FacultyService {
             courseRepository.save(course);
         }
 
+        List<com.sms.studentmanagementsystem.entity.Subject> assignedSubjects = subjectRepository.findByFacultyId(id);
+        for (com.sms.studentmanagementsystem.entity.Subject sub : assignedSubjects) {
+            sub.setFaculty(null);
+            subjectRepository.save(sub);
+        }
+
         User user = faculty.getUser();
+        String name = faculty.getName();
         facultyRepository.delete(faculty);
-        userRepository.delete(user);
+        if (user != null) {
+            userRepository.delete(user);
+        }
+
+        auditLogService.logAction("DELETE_FACULTY", "Admin", "Faculty " + name, "Deleted faculty record");
+    }
+
+    @Override
+    @Transactional
+    public FacultyResponse toggleFacultyStatus(Long id) {
+        Faculty faculty = facultyRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Faculty", "id", id));
+
+        String currentStatus = faculty.getStatus();
+        String nextStatus = "ACTIVE".equalsIgnoreCase(currentStatus) ? "INACTIVE" : "ACTIVE";
+        faculty.setStatus(nextStatus);
+
+        if (faculty.getUser() != null) {
+            faculty.getUser().setEnabled("ACTIVE".equalsIgnoreCase(nextStatus));
+            userRepository.save(faculty.getUser());
+        }
+
+        Faculty saved = facultyRepository.save(faculty);
+        auditLogService.logAction("STATUS_CHANGE", "Admin", "Faculty " + faculty.getName(), "Changed status to: " + nextStatus);
+        return mapToResponse(saved);
     }
 
     private FacultyResponse mapToResponse(Faculty faculty) {
-        int assignedCount = courseRepository.findByFacultyId(faculty.getId()).size();
+        int assignedCoursesCount = courseRepository.findByFacultyId(faculty.getId()).size();
+        int assignedSubjectsCount = subjectRepository.findByFacultyId(faculty.getId()).size();
 
         return new FacultyResponse(
                 faculty.getId(),
@@ -169,11 +232,16 @@ public class FacultyServiceImpl implements FacultyService {
                 faculty.getName(),
                 faculty.getUser().getEmail(),
                 faculty.getDesignation(),
+                faculty.getSpecialization(),
+                faculty.getStatus(),
+                faculty.getPhone(),
+                faculty.getOfficeRoom(),
                 faculty.getDepartment().getId(),
                 faculty.getDepartment().getName(),
                 faculty.getDepartment().getCode(),
                 faculty.getUser().isEnabled(),
-                assignedCount
+                assignedCoursesCount,
+                assignedSubjectsCount
         );
     }
 }

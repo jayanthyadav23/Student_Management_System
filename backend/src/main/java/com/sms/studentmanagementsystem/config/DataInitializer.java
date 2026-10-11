@@ -21,6 +21,10 @@ public class DataInitializer implements CommandLineRunner {
     private final StudentRepository studentRepository;
     private final CourseRepository courseRepository;
     private final EnrollmentRepository enrollmentRepository;
+    private final SubjectRepository subjectRepository;
+    private final TimetableRepository timetableRepository;
+    private final AnnouncementRepository announcementRepository;
+    private final AuditLogRepository auditLogRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Value("${app.admin.email:admin@sms.com}")
@@ -35,6 +39,10 @@ public class DataInitializer implements CommandLineRunner {
                            StudentRepository studentRepository,
                            CourseRepository courseRepository,
                            EnrollmentRepository enrollmentRepository,
+                           SubjectRepository subjectRepository,
+                           TimetableRepository timetableRepository,
+                           AnnouncementRepository announcementRepository,
+                           AuditLogRepository auditLogRepository,
                            PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.departmentRepository = departmentRepository;
@@ -42,6 +50,10 @@ public class DataInitializer implements CommandLineRunner {
         this.studentRepository = studentRepository;
         this.courseRepository = courseRepository;
         this.enrollmentRepository = enrollmentRepository;
+        this.subjectRepository = subjectRepository;
+        this.timetableRepository = timetableRepository;
+        this.announcementRepository = announcementRepository;
+        this.auditLogRepository = auditLogRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -105,8 +117,13 @@ public class DataInitializer implements CommandLineRunner {
                     "Associate Professor",
                     cseDept
             );
+            demoFaculty.setSpecialization("Artificial Intelligence & Systems");
+            demoFaculty.setPhone("+1-555-0199");
+            demoFaculty.setOfficeRoom("Tech Block A-302");
             demoFaculty = facultyRepository.save(demoFaculty);
             logger.info("Demo faculty member seeded successfully.");
+        } else if (facultyRepository.count() > 0) {
+            demoFaculty = facultyRepository.findAll().get(0);
         }
 
         // 3. Seed Demo Course assigned to Faculty if no courses exist
@@ -121,11 +138,53 @@ public class DataInitializer implements CommandLineRunner {
                     demoFaculty,
                     1
             );
+            demoCourse.setDescription("Foundational concepts of computing, programming paradigms, and computational problem solving.");
             demoCourse = courseRepository.save(demoCourse);
             logger.info("Demo course CS101 seeded successfully.");
+        } else if (courseRepository.count() > 0) {
+            demoCourse = courseRepository.findAll().get(0);
         }
 
-        // 4. Seed Demo Student if no students exist
+        // 4. Seed Demo Subjects if none exist
+        Subject demoSubject = null;
+        if (subjectRepository.count() == 0 && demoCourse != null && demoFaculty != null) {
+            logger.info("No subjects found. Seeding core academic subjects...");
+            demoSubject = subjectRepository.save(new Subject(
+                    "CS201",
+                    "Data Structures & Algorithms",
+                    4,
+                    "THEORY",
+                    cseDept,
+                    demoCourse,
+                    demoFaculty,
+                    1
+            ));
+            subjectRepository.save(new Subject(
+                    "CS202",
+                    "Database Management Systems",
+                    3,
+                    "THEORY",
+                    cseDept,
+                    demoCourse,
+                    demoFaculty,
+                    1
+            ));
+            subjectRepository.save(new Subject(
+                    "CS203L",
+                    "Data Structures Laboratory",
+                    2,
+                    "PRACTICAL",
+                    cseDept,
+                    demoCourse,
+                    demoFaculty,
+                    1
+            ));
+            logger.info("Academic subjects seeded successfully.");
+        } else if (subjectRepository.count() > 0) {
+            demoSubject = subjectRepository.findAll().get(0);
+        }
+
+        // 5. Seed Demo Student if no students exist
         String studentEmail = "student@sms.com";
         String studentRollNumber = "CS2026001";
         if (studentRepository.count() == 0 && !userRepository.existsByEmail(studentEmail) && !studentRepository.existsByRollNumber(studentRollNumber)) {
@@ -146,6 +205,9 @@ public class DataInitializer implements CommandLineRunner {
                     cseDept,
                     1
             );
+            demoStudent.setAcademicYear("2025-2026");
+            demoStudent.setPhone("+1-555-0144");
+            demoStudent.setAddress("42 Innovation Way, Tech Campus");
             Student savedStudent = studentRepository.save(demoStudent);
 
             // Enroll demo student into demo course
@@ -154,6 +216,58 @@ public class DataInitializer implements CommandLineRunner {
                 logger.info("Demo student enrolled into course CS101.");
             }
             logger.info("Demo student account and profile seeded successfully.");
+        }
+
+        // 6. Seed Timetable slots if none exist
+        if (timetableRepository.count() == 0 && demoCourse != null && demoSubject != null && demoFaculty != null) {
+            logger.info("Seeding initial timetable schedule...");
+            timetableRepository.save(new TimetableEntry(
+                    "MONDAY", "09:00 AM", "10:00 AM", "LH-101",
+                    cseDept, 1, demoCourse, demoSubject, demoFaculty
+            ));
+            timetableRepository.save(new TimetableEntry(
+                    "WEDNESDAY", "10:15 AM", "11:15 AM", "LH-101",
+                    cseDept, 1, demoCourse, demoSubject, demoFaculty
+            ));
+            timetableRepository.save(new TimetableEntry(
+                    "FRIDAY", "02:00 PM", "04:00 PM", "Lab-2",
+                    cseDept, 1, demoCourse, demoSubject, demoFaculty
+            ));
+            logger.info("Timetable slots seeded successfully.");
+        }
+
+        // 7. Seed Announcements if none exist
+        if (announcementRepository.count() == 0) {
+            logger.info("Seeding initial announcements...");
+            announcementRepository.save(new Announcement(
+                    "Welcome to the Academic Management Portal",
+                    "Welcome students and faculty to the upgraded EduManage institutional portal. Please check your assigned courses, subjects, and weekly schedules.",
+                    "ALL",
+                    "GENERAL",
+                    null,
+                    "Office of Academic Affairs",
+                    true
+            ));
+            announcementRepository.save(new Announcement(
+                    "Mid-Term Examination Schedule Announced",
+                    "The mid-term examination timetable for Semester 1 will commence next month. Detailed subject-wise schedules are now published.",
+                    "STUDENT",
+                    "EXAM",
+                    cseDept,
+                    "Examination Cell",
+                    false
+            ));
+            logger.info("Initial announcements seeded successfully.");
+        }
+
+        // 8. Seed Initial Audit Log if none exist
+        if (auditLogRepository.count() == 0) {
+            auditLogRepository.save(new AuditLog(
+                    "SYSTEM_INIT",
+                    "System Engine",
+                    "Institutional Catalog",
+                    "Academic departments, default super admin, courses, and timetable initialized."
+            ));
         }
     }
 }

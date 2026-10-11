@@ -14,5 +14,10 @@ public record FacultyUpdateRequest(
         String designation,
 
         @NotNull(message = "Department ID is required")
-        Long departmentId
+        Long departmentId,
+
+        String specialization,
+        String status,
+        String phone,
+        String officeRoom
 ) {}

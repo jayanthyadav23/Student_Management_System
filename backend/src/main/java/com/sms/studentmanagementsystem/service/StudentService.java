@@ -26,4 +26,8 @@ public interface StudentService {
     EnrollmentResponse enrollStudent(EnrollmentRequest request);
 
     void unenrollStudent(Long studentId, Long courseId);
+
+    StudentResponse toggleStudentStatus(Long id);
+
+    List<StudentResponse> getAllStudentsList(String search, Long departmentId, Integer semester);
 }

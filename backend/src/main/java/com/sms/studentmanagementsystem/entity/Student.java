@@ -38,6 +38,18 @@ public class Student {
     @Column(nullable = false)
     private Integer semester;
 
+    @Column(name = "academic_year", length = 20)
+    private String academicYear = "2025-2026";
+
+    @Column(nullable = false, length = 20)
+    private String status = "ACTIVE";
+
+    @Column(length = 25)
+    private String phone;
+
+    @Column(length = 255)
+    private String address;
+
     @Column(name = "enrollment_date", nullable = false, updatable = false)
     private LocalDate enrollmentDate;
 
@@ -114,6 +126,38 @@ public class Student {
 
     public void setSemester(Integer semester) {
         this.semester = semester;
+    }
+
+    public String getAcademicYear() {
+        return academicYear;
+    }
+
+    public void setAcademicYear(String academicYear) {
+        this.academicYear = academicYear;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
     }
 
     public LocalDate getEnrollmentDate() {

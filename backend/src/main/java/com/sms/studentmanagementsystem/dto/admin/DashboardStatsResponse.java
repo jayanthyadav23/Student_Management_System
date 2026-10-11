@@ -1,5 +1,6 @@
 package com.sms.studentmanagementsystem.dto.admin;
 
+import com.sms.studentmanagementsystem.dto.audit.AuditLogResponse;
 import java.util.List;
 
 public record DashboardStatsResponse(
@@ -7,6 +8,9 @@ public record DashboardStatsResponse(
         long totalFaculty,
         long totalCourses,
         long totalDepartments,
+        long totalSubjects,
+        long activeAnnouncementsCount,
         List<DepartmentStudentCount> studentsPerDepartment,
-        List<TopEnrolledCourse> topEnrolledCourses
+        List<TopEnrolledCourse> topEnrolledCourses,
+        List<AuditLogResponse> recentActivities
 ) {}

@@ -89,4 +89,19 @@ public class StudentController {
         studentService.unenrollStudent(studentId, courseId);
         return ResponseEntity.ok(ApiResponse.success("Student unenrolled from course successfully", null));
     }
+
+    @PatchMapping("/{id}/toggle-status")
+    public ResponseEntity<ApiResponse<StudentResponse>> toggleStudentStatus(@PathVariable Long id) {
+        StudentResponse response = studentService.toggleStudentStatus(id);
+        return ResponseEntity.ok(ApiResponse.success("Student status updated successfully", response));
+    }
+
+    @GetMapping("/all")
+    public ResponseEntity<ApiResponse<List<StudentResponse>>> getAllStudentsList(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) Integer semester) {
+        List<StudentResponse> list = studentService.getAllStudentsList(search, departmentId, semester);
+        return ResponseEntity.ok(ApiResponse.success("All students list retrieved", list));
+    }
 }

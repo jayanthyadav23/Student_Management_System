@@ -71,4 +71,10 @@ public class FacultyController {
         facultyService.deleteFaculty(id);
         return ResponseEntity.ok(ApiResponse.success("Faculty member and associated login account deleted successfully", null));
     }
+
+    @PatchMapping("/{id}/toggle-status")
+    public ResponseEntity<ApiResponse<FacultyResponse>> toggleFacultyStatus(@PathVariable Long id) {
+        FacultyResponse response = facultyService.toggleFacultyStatus(id);
+        return ResponseEntity.ok(ApiResponse.success("Faculty status updated successfully", response));
+    }
 }

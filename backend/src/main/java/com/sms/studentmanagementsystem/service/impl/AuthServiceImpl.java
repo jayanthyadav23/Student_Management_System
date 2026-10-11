@@ -93,6 +93,10 @@ public class AuthServiceImpl implements AuthService {
             targetRole = Role.STUDENT;
         }
 
+        if (targetRole == Role.ADMIN) {
+            throw new BadRequestException("Direct registration as ADMIN is prohibited. Administrator accounts must be provisioned by institutional initialization.");
+        }
+
         if (userRepository.existsByEmail(cleanEmail)) {
             throw new DuplicateResourceException("An account with email '" + cleanEmail + "' already exists");
         }

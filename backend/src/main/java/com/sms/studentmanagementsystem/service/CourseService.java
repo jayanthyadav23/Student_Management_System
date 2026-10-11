@@ -22,4 +22,12 @@ public interface CourseService {
     CourseResponse assignFacultyToCourse(Long courseId, CourseAssignFacultyRequest request);
 
     void deleteCourse(Long id);
+
+    CourseResponse toggleCourseStatus(Long id);
+
+    List<com.sms.studentmanagementsystem.dto.enrollment.EnrollmentResponse> getCourseEnrollments(Long courseId);
+
+    com.sms.studentmanagementsystem.dto.enrollment.EnrollmentResponse enrollStudentToCourse(Long courseId, Long studentId);
+
+    void removeStudentFromCourse(Long courseId, Long studentId);
 }

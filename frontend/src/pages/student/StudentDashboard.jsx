@@ -15,6 +15,8 @@ import {
   Mail,
   Phone,
   ShieldCheck,
+  Calendar,
+  Megaphone,
 } from 'lucide-react';
 
 const StudentDashboard = () => {
@@ -93,6 +95,12 @@ const StudentDashboard = () => {
                   <Mail className="w-3.5 h-3.5" />
                   {profile?.email}
                 </span>
+                {profile?.academicYear && (
+                  <span className="flex items-center gap-1 font-mono">
+                    <Calendar className="w-3.5 h-3.5" />
+                    {profile?.academicYear}
+                  </span>
+                )}
                 {profile?.phone && (
                   <span className="flex items-center gap-1">
                     <Phone className="w-3.5 h-3.5" />
@@ -119,6 +127,61 @@ const StudentDashboard = () => {
             </span>
           </div>
         </div>
+      </div>
+
+      {/* Quick Action Navigation Buttons */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Link
+          to="/student/timetable"
+          className="p-3.5 bg-white rounded-2xl border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all flex items-center gap-3 group"
+        >
+          <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+            <Calendar className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="font-bold text-slate-800 text-xs">Class Timetable</div>
+            <div className="text-[11px] text-slate-400">Weekly schedule</div>
+          </div>
+        </Link>
+
+        <Link
+          to="/student/announcements"
+          className="p-3.5 bg-white rounded-2xl border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all flex items-center gap-3 group"
+        >
+          <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:bg-amber-600 group-hover:text-white transition-colors">
+            <Megaphone className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="font-bold text-slate-800 text-xs">Notice Board</div>
+            <div className="text-[11px] text-slate-400">Campus circulars</div>
+          </div>
+        </Link>
+
+        <Link
+          to="/student/attendance"
+          className="p-3.5 bg-white rounded-2xl border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all flex items-center gap-3 group"
+        >
+          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+            <CalendarCheck className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="font-bold text-slate-800 text-xs">My Attendance</div>
+            <div className="text-[11px] text-slate-400">Session breakdown</div>
+          </div>
+        </Link>
+
+        <Link
+          to="/student/results"
+          className="p-3.5 bg-white rounded-2xl border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all flex items-center gap-3 group"
+        >
+          <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
+            <Award className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="font-bold text-slate-800 text-xs">Academic Results</div>
+            <div className="text-[11px] text-slate-400">Grades & GPA</div>
+          </div>
+        </Link>
       </div>
 
       {/* Critical Attendance Warning Alert (< 75%) */}

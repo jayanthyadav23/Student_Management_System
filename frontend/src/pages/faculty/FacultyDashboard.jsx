@@ -15,6 +15,8 @@ import {
   ArrowRight,
   BarChart3,
   CheckCircle2,
+  Calendar,
+  Megaphone,
 } from 'lucide-react';
 
 const FacultyDashboard = () => {
@@ -65,9 +67,64 @@ const FacultyDashboard = () => {
             Welcome, {user?.name || 'Professor'}!
           </h1>
           <p className="text-sm text-slate-300 mt-1 max-w-xl">
-            Manage your daily course attendance, input academic exam marks, and monitor student performance metrics.
+            Manage your daily course attendance, input academic exam marks, review timetables, and monitor student performance metrics.
           </p>
         </div>
+      </div>
+
+      {/* Quick Action Navigation Buttons */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Link
+          to="/faculty/timetable"
+          className="p-3.5 bg-white rounded-2xl border border-slate-200 hover:border-teal-300 hover:shadow-md transition-all flex items-center gap-3 group"
+        >
+          <div className="w-9 h-9 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center group-hover:bg-teal-600 group-hover:text-white transition-colors">
+            <Calendar className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="font-bold text-slate-800 text-xs">Faculty Timetable</div>
+            <div className="text-[11px] text-slate-400">Class timings & halls</div>
+          </div>
+        </Link>
+
+        <Link
+          to="/faculty/announcements"
+          className="p-3.5 bg-white rounded-2xl border border-slate-200 hover:border-teal-300 hover:shadow-md transition-all flex items-center gap-3 group"
+        >
+          <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:bg-amber-600 group-hover:text-white transition-colors">
+            <Megaphone className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="font-bold text-slate-800 text-xs">Campus Notices</div>
+            <div className="text-[11px] text-slate-400">Broadcasts & alerts</div>
+          </div>
+        </Link>
+
+        <Link
+          to="/faculty/attendance"
+          className="p-3.5 bg-white rounded-2xl border border-slate-200 hover:border-teal-300 hover:shadow-md transition-all flex items-center gap-3 group"
+        >
+          <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+            <CalendarCheck className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="font-bold text-slate-800 text-xs">Daily Attendance</div>
+            <div className="text-[11px] text-slate-400">Session marking</div>
+          </div>
+        </Link>
+
+        <Link
+          to="/faculty/marks"
+          className="p-3.5 bg-white rounded-2xl border border-slate-200 hover:border-teal-300 hover:shadow-md transition-all flex items-center gap-3 group"
+        >
+          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+            <Award className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="font-bold text-slate-800 text-xs">Grade Entry</div>
+            <div className="text-[11px] text-slate-400">Internal & final marks</div>
+          </div>
+        </Link>
       </div>
 
       {/* Metric Cards */}

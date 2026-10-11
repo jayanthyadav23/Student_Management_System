@@ -22,5 +22,10 @@ public record StudentUpdateRequest(
         @NotNull(message = "Semester is required")
         @Min(value = 1, message = "Semester must be between 1 and 12")
         @Max(value = 12, message = "Semester must be between 1 and 12")
-        Integer semester
+        Integer semester,
+
+        String academicYear,
+        String status,
+        String phone,
+        String address
 ) {}

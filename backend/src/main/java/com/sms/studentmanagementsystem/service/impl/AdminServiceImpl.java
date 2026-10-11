@@ -23,6 +23,9 @@ public class AdminServiceImpl implements AdminService {
     private final FacultyRepository facultyRepository;
     private final CourseRepository courseRepository;
     private final DepartmentRepository departmentRepository;
+    private final SubjectRepository subjectRepository;
+    private final AnnouncementRepository announcementRepository;
+    private final com.sms.studentmanagementsystem.service.AuditLogService auditLogService;
     private final PasswordEncoder passwordEncoder;
 
     public AdminServiceImpl(UserRepository userRepository,
@@ -30,12 +33,18 @@ public class AdminServiceImpl implements AdminService {
                             FacultyRepository facultyRepository,
                             CourseRepository courseRepository,
                             DepartmentRepository departmentRepository,
+                            SubjectRepository subjectRepository,
+                            AnnouncementRepository announcementRepository,
+                            com.sms.studentmanagementsystem.service.AuditLogService auditLogService,
                             PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.studentRepository = studentRepository;
         this.facultyRepository = facultyRepository;
         this.courseRepository = courseRepository;
         this.departmentRepository = departmentRepository;
+        this.subjectRepository = subjectRepository;
+        this.announcementRepository = announcementRepository;
+        this.auditLogService = auditLogService;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -66,6 +75,8 @@ public class AdminServiceImpl implements AdminService {
         long totalFaculty = facultyRepository.count();
         long totalCourses = courseRepository.count();
         long totalDepartments = departmentRepository.count();
+        long totalSubjects = subjectRepository.count();
+        long activeAnnouncementsCount = announcementRepository.count();
 
         List<Object[]> rawDeptCounts = studentRepository.countStudentsPerDepartment();
         List<DepartmentStudentCount> studentsPerDepartment = new ArrayList<>();
@@ -85,13 +96,18 @@ public class AdminServiceImpl implements AdminService {
             topEnrolledCourses.add(new TopEnrolledCourse(courseId, code, title, count));
         }
 
+        List<com.sms.studentmanagementsystem.dto.audit.AuditLogResponse> recentActivities = auditLogService.getRecentLogs();
+
         return new DashboardStatsResponse(
                 totalStudents,
                 totalFaculty,
                 totalCourses,
                 totalDepartments,
+                totalSubjects,
+                activeAnnouncementsCount,
                 studentsPerDepartment,
-                topEnrolledCourses
+                topEnrolledCourses,
+                recentActivities
         );
     }
 }

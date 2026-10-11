@@ -20,4 +20,6 @@ public interface FacultyService {
     FacultyResponse updateFaculty(Long id, FacultyUpdateRequest request);
 
     void deleteFaculty(Long id);
+
+    FacultyResponse toggleFacultyStatus(Long id);
 }
