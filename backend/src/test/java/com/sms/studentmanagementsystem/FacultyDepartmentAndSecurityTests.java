@@ -276,4 +276,44 @@ class FacultyDepartmentAndSecurityTests {
                 .andExpect(jsonPath("$.data.marks[0].remarks").value("Outstanding performance"))
                 .andExpect(jsonPath("$.data.entries").isArray());
     }
+
+    @Test
+    @DisplayName("8. Student listing with pagination, sorting by name, and getAllStudentsList")
+    void studentListingAndSortingTests() throws Exception {
+        // Admin: GET /api/students with sortBy=name&sortDir=asc
+        mockMvc.perform(get("/api/students")
+                        .param("page", "0")
+                        .param("size", "10")
+                        .param("sortBy", "name")
+                        .param("sortDir", "asc")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.content").isArray());
+
+        // Admin: GET /api/students/all
+        mockMvc.perform(get("/api/students/all")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").isArray());
+
+        // Faculty: GET /api/students with sortBy=name&sortDir=asc
+        mockMvc.perform(get("/api/students")
+                        .param("page", "0")
+                        .param("size", "10")
+                        .param("sortBy", "name")
+                        .param("sortDir", "asc")
+                        .header("Authorization", "Bearer " + facultyToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.content").isArray());
+
+        // Faculty: GET /api/students/all
+        mockMvc.perform(get("/api/students/all")
+                        .header("Authorization", "Bearer " + facultyToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").isArray());
+    }
 }

@@ -42,7 +42,10 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
     )
     Page<Course> searchCourses(@Param("query") String query, Pageable pageable);
 
-    @Query("SELECT c FROM Course c JOIN FETCH c.department LEFT JOIN FETCH c.faculty WHERE c.department.id = :departmentId")
+    @Query(
+            value = "SELECT c FROM Course c JOIN FETCH c.department LEFT JOIN FETCH c.faculty WHERE c.department.id = :departmentId",
+            countQuery = "SELECT COUNT(c) FROM Course c WHERE c.department.id = :departmentId"
+    )
     Page<Course> findByDepartmentId(@Param("departmentId") Long departmentId, Pageable pageable);
 
     @Query("SELECT c.id, c.code, c.title, COUNT(e) FROM Course c JOIN Enrollment e ON e.course.id = c.id GROUP BY c.id, c.code, c.title ORDER BY COUNT(e) DESC")

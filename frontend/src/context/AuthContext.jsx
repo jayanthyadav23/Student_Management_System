@@ -5,11 +5,16 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem('sms_user');
-    return savedUser ? JSON.parse(savedUser) : null;
+    try {
+      const savedUser = localStorage.getItem('sms_user');
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch {
+      localStorage.removeItem('sms_user');
+      return null;
+    }
   });
   const [token, setToken] = useState(() => localStorage.getItem('sms_token'));
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => Boolean(localStorage.getItem('sms_token')));
 
   useEffect(() => {
     const verifyUserSession = async () => {
@@ -23,9 +28,12 @@ export const AuthProvider = ({ children }) => {
           }
         } catch {
           logout();
+        } finally {
+          setLoading(false);
         }
+      } else {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     verifyUserSession();

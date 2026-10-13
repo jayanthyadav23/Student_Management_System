@@ -78,16 +78,32 @@ public class StudentPortalServiceImpl implements StudentPortalService {
             hasAttendanceWarning = true;
         }
 
+        Long deptId = null;
+        String deptName = "General";
+        String deptCode = "GEN";
+        if (student.getDepartment() != null) {
+            deptId = student.getDepartment().getId();
+            deptName = student.getDepartment().getName() != null ? student.getDepartment().getName() : "General";
+            deptCode = student.getDepartment().getCode() != null ? student.getDepartment().getCode() : "GEN";
+        }
+
+        Long userId = null;
+        String email = userEmail;
+        if (student.getUser() != null) {
+            userId = student.getUser().getId();
+            email = student.getUser().getEmail() != null ? student.getUser().getEmail() : userEmail;
+        }
+
         return new StudentProfileResponse(
                 student.getId(),
-                student.getUser().getId(),
-                student.getRollNumber(),
-                student.getName(),
-                student.getUser().getEmail(),
+                userId,
+                student.getRollNumber() != null ? student.getRollNumber() : "N/A",
+                student.getName() != null ? student.getName() : "Student",
+                email,
                 student.getAge(),
-                student.getDepartment().getId(),
-                student.getDepartment().getName(),
-                student.getDepartment().getCode(),
+                deptId,
+                deptName,
+                deptCode,
                 student.getSemester(),
                 student.getEnrollmentDate(),
                 enrollments.size(),
@@ -230,10 +246,11 @@ public class StudentPortalServiceImpl implements StudentPortalService {
                     a.getId(),
                     enrollment.getId(),
                     enrollment.getStudent().getId(),
-                    enrollment.getStudent().getRollNumber(),
-                    enrollment.getStudent().getName(),
+                    enrollment.getStudent().getRollNumber() != null ? enrollment.getStudent().getRollNumber() : "N/A",
+                    enrollment.getStudent().getName() != null ? enrollment.getStudent().getName() : "Student",
                     a.getDate(),
-                    a.getStatus()
+                    a.getStatus(),
+                    a.getRemarks() != null ? a.getRemarks() : ""
             ));
         }
 
@@ -243,13 +260,13 @@ public class StudentPortalServiceImpl implements StudentPortalService {
                 : 100.0;
 
         boolean lowAttendanceWarning = attendancePercentage < 75.0;
-        String facultyName = course.getFaculty() != null ? course.getFaculty().getName() : "Unassigned";
+        String facultyName = (course != null && course.getFaculty() != null) ? course.getFaculty().getName() : "Unassigned";
 
         return new StudentCourseAttendanceResponse(
-                course.getId(),
-                course.getCode(),
-                course.getTitle(),
-                course.getCredits(),
+                course != null ? course.getId() : null,
+                course != null ? course.getCode() : "N/A",
+                course != null ? course.getTitle() : "Course",
+                course != null ? course.getCredits() : null,
                 facultyName,
                 totalSessions,
                 presentCount,
@@ -273,19 +290,19 @@ public class StudentPortalServiceImpl implements StudentPortalService {
     private EnrollmentResponse mapToEnrollmentResponse(Enrollment enrollment) {
         Course course = enrollment.getCourse();
         Student student = enrollment.getStudent();
-        String facultyName = course.getFaculty() != null ? course.getFaculty().getName() : "Unassigned";
+        String facultyName = (course != null && course.getFaculty() != null) ? course.getFaculty().getName() : "Unassigned";
 
         return new EnrollmentResponse(
                 enrollment.getId(),
-                student.getId(),
-                student.getRollNumber(),
-                student.getName(),
-                course.getId(),
-                course.getCode(),
-                course.getTitle(),
-                course.getCredits(),
+                student != null ? student.getId() : null,
+                student != null && student.getRollNumber() != null ? student.getRollNumber() : "N/A",
+                student != null && student.getName() != null ? student.getName() : "Student",
+                course != null ? course.getId() : null,
+                course != null && course.getCode() != null ? course.getCode() : "N/A",
+                course != null && course.getTitle() != null ? course.getTitle() : "Course",
+                course != null ? course.getCredits() : null,
                 facultyName,
-                course.getSemester()
+                course != null ? course.getSemester() : null
         );
     }
 
@@ -294,12 +311,19 @@ public class StudentPortalServiceImpl implements StudentPortalService {
                 ? Math.round((mark.getScore() / mark.getMaxScore() * 100.0) * 100.0) / 100.0
                 : 0.0;
 
+        Enrollment enrollment = mark.getEnrollment();
+        Student student = enrollment != null ? enrollment.getStudent() : null;
+        Long enrollId = enrollment != null ? enrollment.getId() : null;
+        Long studentId = student != null ? student.getId() : null;
+        String roll = student != null && student.getRollNumber() != null ? student.getRollNumber() : "N/A";
+        String name = student != null && student.getName() != null ? student.getName() : "Student";
+
         return new MarkResponse(
                 mark.getId(),
-                mark.getEnrollment().getId(),
-                mark.getEnrollment().getStudent().getId(),
-                mark.getEnrollment().getStudent().getRollNumber(),
-                mark.getEnrollment().getStudent().getName(),
+                enrollId,
+                studentId,
+                roll,
+                name,
                 mark.getExamType(),
                 mark.getScore(),
                 mark.getMaxScore(),

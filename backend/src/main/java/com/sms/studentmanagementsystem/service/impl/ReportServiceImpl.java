@@ -77,11 +77,17 @@ public class ReportServiceImpl implements ReportService {
             }
 
             Student student = enrollment.getStudent();
+            Long studentId = (student != null) ? student.getId() : null;
+            String roll = (student != null && student.getRollNumber() != null) ? student.getRollNumber() : "N/A";
+            String name = (student != null && student.getName() != null) ? student.getName() : "Student";
+            String deptName = (student != null && student.getDepartment() != null && student.getDepartment().getName() != null)
+                    ? student.getDepartment().getName() : "General";
+
             studentItems.add(new StudentAttendanceReportItem(
-                    student.getId(),
-                    student.getRollNumber(),
-                    student.getName(),
-                    student.getDepartment().getName(),
+                    studentId,
+                    roll,
+                    name,
+                    deptName,
                     totalClasses,
                     attendedClasses,
                     percentage,
@@ -145,16 +151,21 @@ public class ReportServiceImpl implements ReportService {
 
                 totalScoreSum += percentage;
 
+                Student student = enrollment.getStudent();
+                Long studentId = (student != null) ? student.getId() : null;
+                String roll = (student != null && student.getRollNumber() != null) ? student.getRollNumber() : "N/A";
+                String name = (student != null && student.getName() != null) ? student.getName() : "Student";
+
                 if (percentage > highestPercentage || topperName.equals("N/A")) {
                     highestPercentage = percentage;
-                    topperName = enrollment.getStudent().getName();
-                    topperRollNumber = enrollment.getStudent().getRollNumber();
+                    topperName = name;
+                    topperRollNumber = roll;
                 }
 
                 studentResults.add(new StudentResultReportItem(
-                        enrollment.getStudent().getId(),
-                        enrollment.getStudent().getRollNumber(),
-                        enrollment.getStudent().getName(),
+                        studentId,
+                        roll,
+                        name,
                         totalScore,
                         maxScore,
                         percentage,
@@ -162,10 +173,15 @@ public class ReportServiceImpl implements ReportService {
                         status
                 ));
             } else {
+                Student student = enrollment.getStudent();
+                Long studentId = (student != null) ? student.getId() : null;
+                String roll = (student != null && student.getRollNumber() != null) ? student.getRollNumber() : "N/A";
+                String name = (student != null && student.getName() != null) ? student.getName() : "Student";
+
                 studentResults.add(new StudentResultReportItem(
-                        enrollment.getStudent().getId(),
-                        enrollment.getStudent().getRollNumber(),
-                        enrollment.getStudent().getName(),
+                        studentId,
+                        roll,
+                        name,
                         0.0,
                         0.0,
                         0.0,
@@ -340,6 +356,8 @@ public class ReportServiceImpl implements ReportService {
         }
 
         if (course.getFaculty() == null ||
+                course.getFaculty().getUser() == null ||
+                course.getFaculty().getUser().getEmail() == null ||
                 !course.getFaculty().getUser().getEmail().equalsIgnoreCase(userEmail)) {
             throw new UnauthorizedAccessException("You are not authorized to view reports for course '" + course.getCode() + "'");
         }

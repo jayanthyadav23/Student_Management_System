@@ -25,7 +25,7 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
     List<Enrollment> findByCourseId(@Param("courseId") Long courseId);
 
     @Query(
-            value = "SELECT e FROM Enrollment e JOIN FETCH e.student s JOIN FETCH s.department JOIN FETCH e.course c WHERE e.course.id = :courseId",
+            value = "SELECT e FROM Enrollment e JOIN FETCH e.student s LEFT JOIN FETCH s.department JOIN FETCH e.course c LEFT JOIN FETCH c.faculty WHERE e.course.id = :courseId",
             countQuery = "SELECT COUNT(e) FROM Enrollment e WHERE e.course.id = :courseId"
     )
     Page<Enrollment> findByCourseIdPaged(@Param("courseId") Long courseId, Pageable pageable);

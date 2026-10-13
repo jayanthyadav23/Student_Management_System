@@ -37,7 +37,7 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
             "SUM(CASE WHEN a.status = com.sms.studentmanagementsystem.entity.AttendanceStatus.LATE THEN 1 ELSE 0 END), " +
             "SUM(CASE WHEN a.status = com.sms.studentmanagementsystem.entity.AttendanceStatus.ABSENT THEN 1 ELSE 0 END) " +
             "FROM Enrollment e " +
-            "LEFT JOIN Attendance a ON a.enrollment.id = e.id " +
+            "LEFT JOIN e.attendanceRecords a " +
             "WHERE e.course.id = :courseId " +
             "GROUP BY e.id")
     List<Object[]> getCourseAttendanceSummary(@Param("courseId") Long courseId);
