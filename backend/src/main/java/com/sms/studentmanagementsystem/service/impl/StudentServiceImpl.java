@@ -418,13 +418,27 @@ public class StudentServiceImpl implements StudentService {
         long count = enrollmentRepository.countByStudentId(student.getId());
         int enrolledCount = (int) count;
 
-        Long userId = (student.getUser() != null) ? student.getUser().getId() : null;
-        String email = (student.getUser() != null) ? student.getUser().getEmail() : "N/A";
-        boolean enabled = (student.getUser() != null) && student.getUser().isEnabled();
+        Long userId = null;
+        String email = "N/A";
+        boolean enabled = true;
+        try {
+            if (student.getUser() != null) {
+                userId = student.getUser().getId();
+                email = student.getUser().getEmail();
+                enabled = student.getUser().isEnabled();
+            }
+        } catch (Exception ignored) {}
 
-        Long deptId = (student.getDepartment() != null) ? student.getDepartment().getId() : null;
-        String deptName = (student.getDepartment() != null) ? student.getDepartment().getName() : "General";
-        String deptCode = (student.getDepartment() != null) ? student.getDepartment().getCode() : "GEN";
+        Long deptId = null;
+        String deptName = "General";
+        String deptCode = "GEN";
+        try {
+            if (student.getDepartment() != null) {
+                deptId = student.getDepartment().getId();
+                deptName = student.getDepartment().getName();
+                deptCode = student.getDepartment().getCode();
+            }
+        } catch (Exception ignored) {}
 
         return new StudentResponse(
                 student.getId(),
