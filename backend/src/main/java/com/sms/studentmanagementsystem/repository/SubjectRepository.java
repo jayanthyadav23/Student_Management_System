@@ -22,6 +22,8 @@ public interface SubjectRepository extends JpaRepository<Subject, Long> {
 
     List<Subject> findByCourseId(Long courseId);
 
+    boolean existsByCourseIdAndFacultyId(Long courseId, Long facultyId);
+
     List<Subject> findByDepartmentIdAndSemester(Long departmentId, Integer semester);
 
     @Query("SELECT s FROM Subject s WHERE " +

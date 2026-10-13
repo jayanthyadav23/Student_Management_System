@@ -11,7 +11,9 @@ import com.sms.studentmanagementsystem.exception.ResourceNotFoundException;
 import com.sms.studentmanagementsystem.exception.UnauthorizedAccessException;
 import com.sms.studentmanagementsystem.repository.CourseRepository;
 import com.sms.studentmanagementsystem.repository.EnrollmentRepository;
+import com.sms.studentmanagementsystem.repository.FacultyRepository;
 import com.sms.studentmanagementsystem.repository.MarkRepository;
+import com.sms.studentmanagementsystem.repository.SubjectRepository;
 import com.sms.studentmanagementsystem.repository.UserRepository;
 import com.sms.studentmanagementsystem.service.MarksService;
 import org.springframework.stereotype.Service;
@@ -30,15 +32,21 @@ public class MarksServiceImpl implements MarksService {
     private final CourseRepository courseRepository;
     private final EnrollmentRepository enrollmentRepository;
     private final UserRepository userRepository;
+    private final FacultyRepository facultyRepository;
+    private final SubjectRepository subjectRepository;
 
     public MarksServiceImpl(MarkRepository markRepository,
                             CourseRepository courseRepository,
                             EnrollmentRepository enrollmentRepository,
-                            UserRepository userRepository) {
+                            UserRepository userRepository,
+                            FacultyRepository facultyRepository,
+                            SubjectRepository subjectRepository) {
         this.markRepository = markRepository;
         this.courseRepository = courseRepository;
         this.enrollmentRepository = enrollmentRepository;
         this.userRepository = userRepository;
+        this.facultyRepository = facultyRepository;
+        this.subjectRepository = subjectRepository;
     }
 
     @Override
@@ -64,8 +72,11 @@ public class MarksServiceImpl implements MarksService {
             mark = existing.get();
             mark.setScore(request.score());
             mark.setMaxScore(request.maxScore());
+            if (request.remarks() != null) {
+                mark.setRemarks(request.remarks());
+            }
         } else {
-            mark = new Mark(enrollment, request.examType(), request.score(), request.maxScore());
+            mark = new Mark(enrollment, request.examType(), request.score(), request.maxScore(), request.remarks());
         }
 
         Mark saved = markRepository.save(mark);
@@ -79,12 +90,13 @@ public class MarksServiceImpl implements MarksService {
         validateCourseAccess(course, userEmail);
 
         for (StudentMarkEntry entry : request.entries()) {
+            double effectiveScore = entry.getEffectiveScore();
             double effectiveMaxScore = (entry.maxScore() != null && entry.maxScore() > 0)
                     ? entry.maxScore()
-                    : request.defaultMaxScore();
+                    : request.getEffectiveMaxScore();
 
-            if (entry.score() > effectiveMaxScore) {
-                throw new BadRequestException("Score (" + entry.score() + ") cannot exceed maximum score (" + effectiveMaxScore + ") for enrollment ID: " + entry.enrollmentId());
+            if (effectiveScore > effectiveMaxScore) {
+                throw new BadRequestException("Score (" + effectiveScore + ") cannot exceed maximum score (" + effectiveMaxScore + ") for enrollment ID: " + entry.enrollmentId());
             }
 
             Enrollment enrollment = enrollmentRepository.findById(entry.enrollmentId())
@@ -97,11 +109,14 @@ public class MarksServiceImpl implements MarksService {
             Optional<Mark> existing = markRepository.findByEnrollmentIdAndExamType(entry.enrollmentId(), request.examType());
             if (existing.isPresent()) {
                 Mark mark = existing.get();
-                mark.setScore(entry.score());
+                mark.setScore(effectiveScore);
                 mark.setMaxScore(effectiveMaxScore);
+                if (entry.remarks() != null) {
+                    mark.setRemarks(entry.remarks());
+                }
                 markRepository.save(mark);
             } else {
-                Mark mark = new Mark(enrollment, request.examType(), entry.score(), effectiveMaxScore);
+                Mark mark = new Mark(enrollment, request.examType(), effectiveScore, effectiveMaxScore, entry.remarks());
                 markRepository.save(mark);
             }
         }
@@ -143,9 +158,11 @@ public class MarksServiceImpl implements MarksService {
                         enrollment.getStudent().getRollNumber(),
                         enrollment.getStudent().getName(),
                         examType,
-                        0.0,
+                        null,
                         defaultMax,
-                        0.0
+                        null,
+                        "—",
+                        ""
                 ));
             }
         }
@@ -193,8 +210,25 @@ public class MarksServiceImpl implements MarksService {
             return;
         }
 
-        if (course.getFaculty() == null ||
-                !course.getFaculty().getUser().getEmail().equalsIgnoreCase(userEmail)) {
+        Faculty faculty = facultyRepository.findByUserEmail(userEmail)
+                .orElseThrow(() -> new UnauthorizedAccessException("Faculty profile not found for user: " + userEmail));
+
+        boolean isDirectlyAssigned = course.getFaculty() != null &&
+                (course.getFaculty().getId().equals(faculty.getId()) ||
+                 course.getFaculty().getUser().getEmail().equalsIgnoreCase(userEmail));
+
+        boolean teachesSubject = subjectRepository.existsByCourseIdAndFacultyId(course.getId(), faculty.getId());
+
+        Long facultyDeptId = (faculty.getDepartment() != null) ? faculty.getDepartment().getId() : null;
+        boolean sameDepartment = course.getDepartment() != null &&
+                facultyDeptId != null &&
+                course.getDepartment().getId().equals(facultyDeptId);
+
+        boolean courseUnassigned = course.getFaculty() == null;
+
+        boolean noRestrictedCourses = courseRepository.findCoursesForFaculty(faculty.getId(), facultyDeptId).isEmpty();
+
+        if (!isDirectlyAssigned && !teachesSubject && !sameDepartment && !courseUnassigned && !noRestrictedCourses) {
             throw new UnauthorizedAccessException("You are not assigned to instruct or view course '" + course.getCode() + "'");
         }
     }
@@ -223,7 +257,9 @@ public class MarksServiceImpl implements MarksService {
                 mark.getExamType(),
                 mark.getScore(),
                 mark.getMaxScore(),
-                percentage
+                percentage,
+                MarkResponse.calculateGrade(percentage),
+                mark.getRemarks() != null ? mark.getRemarks() : ""
         );
     }
 }

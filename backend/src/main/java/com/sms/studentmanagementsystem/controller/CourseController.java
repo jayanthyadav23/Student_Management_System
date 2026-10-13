@@ -67,7 +67,7 @@ public class CourseController {
         return ResponseEntity.ok(ApiResponse.success("Course updated successfully", updated));
     }
 
-    @PatchMapping("/{id}/assign-faculty")
+    @RequestMapping(value = "/{id}/assign-faculty", method = {RequestMethod.PATCH, RequestMethod.PUT})
     public ResponseEntity<ApiResponse<CourseResponse>> assignFaculty(
             @PathVariable Long id,
             @RequestBody CourseAssignFacultyRequest request) {

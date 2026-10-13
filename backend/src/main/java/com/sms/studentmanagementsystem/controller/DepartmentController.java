@@ -14,8 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/admin/departments")
-@PreAuthorize("hasRole('ADMIN')")
+@RequestMapping({"/api/admin/departments", "/api/departments"})
 public class DepartmentController {
 
     private final DepartmentService departmentService;
@@ -25,6 +24,7 @@ public class DepartmentController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<DepartmentResponse>> createDepartment(
             @Valid @RequestBody DepartmentRequest request) {
         DepartmentResponse created = departmentService.createDepartment(request);
@@ -33,6 +33,7 @@ public class DepartmentController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'FACULTY')")
     public ResponseEntity<ApiResponse<PageResponse<DepartmentResponse>>> getAllDepartments(
             @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "0") int page,
@@ -44,18 +45,21 @@ public class DepartmentController {
     }
 
     @GetMapping("/all")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FACULTY')")
     public ResponseEntity<ApiResponse<List<DepartmentResponse>>> getAllDepartmentsDropdown() {
         List<DepartmentResponse> departments = departmentService.getAllDepartmentsDropdown();
         return ResponseEntity.ok(ApiResponse.success("All departments retrieved", departments));
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FACULTY')")
     public ResponseEntity<ApiResponse<DepartmentResponse>> getDepartmentById(@PathVariable Long id) {
         DepartmentResponse department = departmentService.getDepartmentById(id);
         return ResponseEntity.ok(ApiResponse.success("Department retrieved successfully", department));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<DepartmentResponse>> updateDepartment(
             @PathVariable Long id,
             @Valid @RequestBody DepartmentRequest request) {
@@ -64,6 +68,7 @@ public class DepartmentController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deleteDepartment(@PathVariable Long id) {
         departmentService.deleteDepartment(id);
         return ResponseEntity.ok(ApiResponse.success("Department deleted successfully", null));

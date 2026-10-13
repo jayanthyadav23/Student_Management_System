@@ -7,20 +7,18 @@ import com.sms.studentmanagementsystem.dto.student.StudentCreateRequest;
 import com.sms.studentmanagementsystem.dto.student.StudentResponse;
 import com.sms.studentmanagementsystem.dto.student.StudentUpdateRequest;
 import com.sms.studentmanagementsystem.entity.*;
+import com.sms.studentmanagementsystem.exception.BadRequestException;
 import com.sms.studentmanagementsystem.exception.DuplicateResourceException;
 import com.sms.studentmanagementsystem.exception.ResourceNotFoundException;
-import com.sms.studentmanagementsystem.repository.AttendanceRepository;
-import com.sms.studentmanagementsystem.repository.CourseRepository;
-import com.sms.studentmanagementsystem.repository.DepartmentRepository;
-import com.sms.studentmanagementsystem.repository.EnrollmentRepository;
-import com.sms.studentmanagementsystem.repository.MarkRepository;
-import com.sms.studentmanagementsystem.repository.StudentRepository;
-import com.sms.studentmanagementsystem.repository.UserRepository;
+import com.sms.studentmanagementsystem.exception.UnauthorizedAccessException;
+import com.sms.studentmanagementsystem.repository.*;
 import com.sms.studentmanagementsystem.service.StudentService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +35,7 @@ public class StudentServiceImpl implements StudentService {
     private final EnrollmentRepository enrollmentRepository;
     private final AttendanceRepository attendanceRepository;
     private final MarkRepository markRepository;
+    private final FacultyRepository facultyRepository;
     private final com.sms.studentmanagementsystem.service.AuditLogService auditLogService;
     private final PasswordEncoder passwordEncoder;
 
@@ -47,6 +46,7 @@ public class StudentServiceImpl implements StudentService {
                               EnrollmentRepository enrollmentRepository,
                               AttendanceRepository attendanceRepository,
                               MarkRepository markRepository,
+                              FacultyRepository facultyRepository,
                               com.sms.studentmanagementsystem.service.AuditLogService auditLogService,
                               PasswordEncoder passwordEncoder) {
         this.studentRepository = studentRepository;
@@ -56,6 +56,7 @@ public class StudentServiceImpl implements StudentService {
         this.enrollmentRepository = enrollmentRepository;
         this.attendanceRepository = attendanceRepository;
         this.markRepository = markRepository;
+        this.facultyRepository = facultyRepository;
         this.auditLogService = auditLogService;
         this.passwordEncoder = passwordEncoder;
     }
@@ -97,6 +98,9 @@ public class StudentServiceImpl implements StudentService {
         if (request.academicYear() != null && !request.academicYear().isBlank()) {
             student.setAcademicYear(request.academicYear().trim());
         }
+        if (request.section() != null && !request.section().isBlank()) {
+            student.setSection(request.section().trim().toUpperCase());
+        }
         if (request.status() != null && !request.status().isBlank()) {
             student.setStatus(request.status().trim().toUpperCase());
         }
@@ -118,24 +122,44 @@ public class StudentServiceImpl implements StudentService {
         Student student = studentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Student", "id", id));
 
+        // Enforce faculty department scoping on single student view
+        validateFacultyStudentAccess(student);
+
         return mapToResponse(student);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<StudentResponse> getAllStudents(String search, Long departmentId, Integer semester,
-                                                        int page, int size, String sortBy, String sortDir) {
+    public PageResponse<StudentResponse> getAllStudents(
+            String search,
+            Long departmentId,
+            Integer semester,
+            String academicYear,
+            String section,
+            Long courseId,
+            int page,
+            int size,
+            String sortBy,
+            String sortDir) {
+
+        Long effectiveDepartmentId = resolveDepartmentScopeForCurrentUser(departmentId, courseId);
+
         Sort sort = sortDir.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
         Pageable pageable = PageRequest.of(page, size, sort);
 
-        Page<Student> studentPage;
-        if (search != null && !search.trim().isEmpty()) {
-            studentPage = studentRepository.searchStudents(search.trim(), pageable);
-        } else if (departmentId != null) {
-            studentPage = studentRepository.findByDepartmentId(departmentId, pageable);
-        } else {
-            studentPage = studentRepository.findAll(pageable);
-        }
+        String cleanSearch = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
+        String cleanAcademicYear = (academicYear != null && !academicYear.trim().isEmpty()) ? academicYear.trim() : null;
+        String cleanSection = (section != null && !section.trim().isEmpty()) ? section.trim().toUpperCase() : null;
+
+        Page<Student> studentPage = studentRepository.findWithFilters(
+                effectiveDepartmentId,
+                semester,
+                cleanAcademicYear,
+                cleanSection,
+                cleanSearch,
+                courseId,
+                pageable
+        );
 
         List<StudentResponse> responseList = studentPage.getContent().stream()
                 .map(this::mapToResponse)
@@ -149,6 +173,8 @@ public class StudentServiceImpl implements StudentService {
     public StudentResponse updateStudent(Long id, StudentUpdateRequest request) {
         Student student = studentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Student", "id", id));
+
+        validateFacultyStudentAccess(student);
 
         String cleanRollNumber = request.rollNumber().trim().toUpperCase();
         if (studentRepository.existsByRollNumberAndIdNot(cleanRollNumber, id)) {
@@ -166,6 +192,9 @@ public class StudentServiceImpl implements StudentService {
 
         if (request.academicYear() != null && !request.academicYear().isBlank()) {
             student.setAcademicYear(request.academicYear().trim());
+        }
+        if (request.section() != null && !request.section().isBlank()) {
+            student.setSection(request.section().trim().toUpperCase());
         }
         if (request.status() != null && !request.status().isBlank()) {
             student.setStatus(request.status().trim().toUpperCase());
@@ -230,24 +259,39 @@ public class StudentServiceImpl implements StudentService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<StudentResponse> getAllStudentsList(String search, Long departmentId, Integer semester) {
-        List<Student> list;
-        if (search != null && !search.trim().isEmpty()) {
-            list = studentRepository.searchStudents(search.trim(), PageRequest.of(0, 1000)).getContent();
-        } else if (departmentId != null) {
-            list = studentRepository.findByDepartmentId(departmentId, PageRequest.of(0, 1000)).getContent();
-        } else {
-            list = studentRepository.findAll();
-        }
+    public List<StudentResponse> getAllStudentsList(
+            String search,
+            Long departmentId,
+            Integer semester,
+            String academicYear,
+            String section,
+            Long courseId) {
+
+        Long effectiveDepartmentId = resolveDepartmentScopeForCurrentUser(departmentId, courseId);
+
+        String cleanSearch = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
+        String cleanAcademicYear = (academicYear != null && !academicYear.trim().isEmpty()) ? academicYear.trim() : null;
+        String cleanSection = (section != null && !section.trim().isEmpty()) ? section.trim().toUpperCase() : null;
+
+        List<Student> list = studentRepository.findListWithFilters(
+                effectiveDepartmentId,
+                semester,
+                cleanAcademicYear,
+                cleanSection,
+                cleanSearch,
+                courseId
+        );
+
         return list.stream().map(this::mapToResponse).toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<EnrollmentResponse> getStudentEnrollments(Long studentId) {
-        if (!studentRepository.existsById(studentId)) {
-            throw new ResourceNotFoundException("Student", "id", studentId);
-        }
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student", "id", studentId));
+
+        validateFacultyStudentAccess(student);
 
         List<Enrollment> enrollments = enrollmentRepository.findByStudentId(studentId);
         return enrollments.stream().map(this::mapToEnrollmentResponse).toList();
@@ -261,6 +305,14 @@ public class StudentServiceImpl implements StudentService {
 
         Course course = courseRepository.findById(request.courseId())
                 .orElseThrow(() -> new ResourceNotFoundException("Course", "id", request.courseId()));
+
+        // Department-wise validation: student must belong to the course's department
+        if (!student.getDepartment().getId().equals(course.getDepartment().getId())) {
+            throw new BadRequestException("Department mismatch: Student '" + student.getName() +
+                    "' belongs to department '" + student.getDepartment().getName() +
+                    "', but course '" + course.getCode() + "' belongs to department '" +
+                    course.getDepartment().getName() + "'.");
+        }
 
         if (enrollmentRepository.existsByStudentIdAndCourseId(request.studentId(), request.courseId())) {
             throw new DuplicateResourceException("Student is already enrolled in course '" + course.getCode() + "'");
@@ -286,6 +338,53 @@ public class StudentServiceImpl implements StudentService {
         auditLogService.logAction("COURSE_UNENROLL", "Admin", "Course " + courseId, "Unenrolled student " + studentId);
     }
 
+    private Long resolveDepartmentScopeForCurrentUser(Long requestedDepartmentId, Long courseId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || auth.getName().equalsIgnoreCase("anonymousUser")) {
+            return requestedDepartmentId;
+        }
+
+        User currentUser = userRepository.findByEmail(auth.getName()).orElse(null);
+        if (currentUser == null || currentUser.getRole() != Role.FACULTY) {
+            return requestedDepartmentId;
+        }
+
+        Faculty faculty = facultyRepository.findByUserEmail(currentUser.getEmail())
+                .orElseThrow(() -> new ResourceNotFoundException("Faculty profile not found for user: " + currentUser.getEmail()));
+
+        Long facultyDeptId = faculty.getDepartment().getId();
+        if (requestedDepartmentId != null && !requestedDepartmentId.equals(facultyDeptId)) {
+            throw new UnauthorizedAccessException("Faculty members are restricted to viewing students from their own department (" + faculty.getDepartment().getName() + ")");
+        }
+
+        if (courseId != null) {
+            Course course = courseRepository.findById(courseId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Course", "id", courseId));
+            boolean isAssigned = course.getFaculty() != null && course.getFaculty().getId().equals(faculty.getId());
+            boolean sameDept = course.getDepartment() != null && course.getDepartment().getId().equals(facultyDeptId);
+            if (!isAssigned && !sameDept) {
+                throw new UnauthorizedAccessException("You are not assigned to instruct or view course '" + course.getCode() + "'");
+            }
+        }
+
+        return facultyDeptId;
+    }
+
+    private void validateFacultyStudentAccess(Student student) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || auth.getName().equalsIgnoreCase("anonymousUser")) {
+            return;
+        }
+
+        User currentUser = userRepository.findByEmail(auth.getName()).orElse(null);
+        if (currentUser != null && currentUser.getRole() == Role.FACULTY) {
+            Faculty faculty = facultyRepository.findByUserEmail(currentUser.getEmail()).orElse(null);
+            if (faculty != null && !faculty.getDepartment().getId().equals(student.getDepartment().getId())) {
+                throw new UnauthorizedAccessException("You are not authorized to view students outside your department (" + faculty.getDepartment().getName() + ")");
+            }
+        }
+    }
+
     private StudentResponse mapToResponse(Student student) {
         int enrolledCount = enrollmentRepository.findByStudentId(student.getId()).size();
 
@@ -301,6 +400,7 @@ public class StudentServiceImpl implements StudentService {
                 student.getDepartment().getCode(),
                 student.getSemester(),
                 student.getAcademicYear(),
+                student.getSection(),
                 student.getStatus(),
                 student.getPhone(),
                 student.getAddress(),

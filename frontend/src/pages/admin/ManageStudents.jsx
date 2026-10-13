@@ -7,6 +7,7 @@ import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 import {
   GraduationCap,
   Plus,
@@ -25,9 +26,11 @@ import {
   Upload,
   Calendar,
   UserCheck,
+  Lock,
 } from 'lucide-react';
 
 const ManageStudents = () => {
+  const { user } = useAuth();
   const [students, setStudents] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [allCourses, setAllCourses] = useState([]);
@@ -46,13 +49,16 @@ const ManageStudents = () => {
   const [editingStudent, setEditingStudent] = useState(null);
   const [studentFormData, setStudentFormData] = useState({
     rollNumber: '',
-    firstName: '',
-    lastName: '',
+    name: '',
     email: '',
     password: '',
+    age: 20,
+    semester: 1,
     phone: '',
     departmentId: '',
     academicYear: '2024-2025',
+    address: '',
+    status: 'ACTIVE',
   });
 
   // Student Profile View Modal
@@ -135,13 +141,16 @@ const ManageStudents = () => {
     setEditingStudent(null);
     setStudentFormData({
       rollNumber: '',
-      firstName: '',
-      lastName: '',
+      name: '',
       email: '',
       password: '',
+      age: 20,
+      semester: 1,
       phone: '',
       departmentId: departments.length > 0 ? departments[0].id : '',
       academicYear: '2024-2025',
+      address: '',
+      status: 'ACTIVE',
     });
     setIsStudentModalOpen(true);
   };
@@ -149,14 +158,17 @@ const ManageStudents = () => {
   const handleOpenEdit = (student) => {
     setEditingStudent(student);
     setStudentFormData({
-      rollNumber: student.rollNumber,
-      firstName: student.firstName,
-      lastName: student.lastName,
-      email: student.email,
+      rollNumber: student.rollNumber || '',
+      name: student.name || '',
+      email: student.email || '',
       password: '',
+      age: student.age || 20,
+      semester: student.semester || 1,
       phone: student.phone || '',
-      departmentId: student.departmentId || '',
+      departmentId: student.departmentId || (departments[0]?.id || ''),
       academicYear: student.academicYear || '2024-2025',
+      address: student.address || '',
+      status: student.status || 'ACTIVE',
     });
     setIsStudentModalOpen(true);
   };
@@ -189,29 +201,55 @@ const ManageStudents = () => {
 
   const handleSaveStudent = async (e) => {
     e.preventDefault();
+    if (!studentFormData.name?.trim()) {
+      showError('Student name is required.');
+      return;
+    }
+    if (!studentFormData.departmentId) {
+      showError('Please select a department.');
+      return;
+    }
+
     try {
       setSubmitting(true);
       if (editingStudent) {
         await studentApi.update(editingStudent.id, {
-          firstName: studentFormData.firstName.trim(),
-          lastName: studentFormData.lastName.trim(),
-          phone: studentFormData.phone?.trim(),
-          academicYear: studentFormData.academicYear?.trim(),
+          rollNumber: (studentFormData.rollNumber || editingStudent.rollNumber).trim().toUpperCase(),
+          name: studentFormData.name.trim(),
+          age: Number(studentFormData.age) || 20,
           departmentId: Number(studentFormData.departmentId),
+          semester: Number(studentFormData.semester) || 1,
+          phone: studentFormData.phone?.trim() || '',
+          academicYear: studentFormData.academicYear?.trim() || '2024-2025',
+          address: studentFormData.address?.trim() || '',
+          status: studentFormData.status || 'ACTIVE',
         });
-        showSuccess('Student record updated.');
+        showSuccess('Student profile updated successfully.');
       } else {
+        if (!studentFormData.rollNumber?.trim()) {
+          showError('Roll number is required.');
+          setSubmitting(false);
+          return;
+        }
+        if (!studentFormData.email?.trim() || !studentFormData.password) {
+          showError('Email and initial password are required.');
+          setSubmitting(false);
+          return;
+        }
         await studentApi.create({
           rollNumber: studentFormData.rollNumber.trim().toUpperCase(),
-          firstName: studentFormData.firstName.trim(),
-          lastName: studentFormData.lastName.trim(),
+          name: studentFormData.name.trim(),
           email: studentFormData.email.trim(),
           password: studentFormData.password,
-          phone: studentFormData.phone?.trim(),
-          academicYear: studentFormData.academicYear?.trim(),
+          age: Number(studentFormData.age) || 20,
           departmentId: Number(studentFormData.departmentId),
+          semester: Number(studentFormData.semester) || 1,
+          phone: studentFormData.phone?.trim() || '',
+          academicYear: studentFormData.academicYear?.trim() || '2024-2025',
+          address: studentFormData.address?.trim() || '',
+          status: studentFormData.status || 'ACTIVE',
         });
-        showSuccess('Student admitted and account created.');
+        showSuccess('Student admitted and account created successfully.');
       }
       setIsStudentModalOpen(false);
       fetchStudents();
@@ -227,14 +265,14 @@ const ManageStudents = () => {
     try {
       const res = await studentApi.getAllList();
       const list = res.success && res.data ? res.data : students;
-      const headers = ['Roll Number', 'First Name', 'Last Name', 'Email', 'Phone', 'Department', 'Academic Year', 'Status'];
+      const headers = ['Roll Number', 'Student Name', 'Email', 'Phone', 'Department', 'Semester', 'Academic Year', 'Status'];
       const rows = list.map((s) => [
         `"${s.rollNumber || ''}"`,
-        `"${s.firstName || ''}"`,
-        `"${s.lastName || ''}"`,
+        `"${s.name || ''}"`,
         `"${s.email || ''}"`,
         `"${s.phone || ''}"`,
         `"${s.departmentName || ''}"`,
+        `"${s.semester ?? 1}"`,
         `"${s.academicYear || ''}"`,
         `"${s.status || (s.enabled !== false ? 'ACTIVE' : 'INACTIVE')}"`,
       ]);
@@ -263,17 +301,19 @@ const ManageStudents = () => {
       let createdCount = 0;
       for (const line of lines) {
         const parts = line.split(',').map((p) => p.trim().replace(/^["']|["']$/g, ''));
-        if (parts.length >= 4 && parts[0].toLowerCase() !== 'roll number') {
+        if (parts.length >= 3 && parts[0].toLowerCase() !== 'roll number') {
           try {
             await studentApi.create({
               rollNumber: parts[0].toUpperCase(),
-              firstName: parts[1],
-              lastName: parts[2] || '',
-              email: parts[3],
-              password: parts[4] || 'Student@123',
-              phone: parts[5] || '',
+              name: parts[1],
+              email: parts[2],
+              password: parts[3] || 'Student@123',
+              age: 20,
+              semester: 1,
+              phone: parts[4] || '',
               departmentId: departments[0]?.id || 1,
-              academicYear: parts[6] || '2024-2025',
+              academicYear: parts[5] || '2024-2025',
+              status: 'ACTIVE',
             });
             createdCount++;
           } catch {
@@ -398,23 +438,27 @@ const ManageStudents = () => {
       key: 'name',
       header: 'Student Name',
       sortable: true,
-      sortField: 'lastName',
-      render: (row) => (
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xs uppercase">
-            {row.firstName?.[0]}
-            {row.lastName?.[0]}
-          </div>
-          <div>
-            <div className="font-semibold text-slate-900">
-              {row.firstName} {row.lastName}
+      sortField: 'name',
+      render: (row) => {
+        const initials = row.name
+          ? row.name.split(' ').filter(Boolean).map((n) => n[0]).join('').substring(0, 2).toUpperCase()
+          : 'ST';
+        return (
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xs uppercase">
+              {initials}
             </div>
-            <div className="text-[11px] text-slate-400">
-              Year: {row.academicYear || '2024-2025'}
+            <div>
+              <div className="font-semibold text-slate-900">
+                {row.name}
+              </div>
+              <div className="text-[11px] text-slate-400">
+                Sem {row.semester ?? 1} • Age {row.age ?? '—'} • {row.academicYear || '2024-2025'}
+              </div>
             </div>
           </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       key: 'departmentName',
@@ -562,21 +606,28 @@ const ManageStudents = () => {
 
       {/* Filter Toolbar */}
       <div className="flex items-center gap-3">
-        <select
-          value={selectedDeptId}
-          onChange={(e) => {
-            setSelectedDeptId(e.target.value);
-            setPage(0);
-          }}
-          className="px-3.5 py-2 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-700 font-medium"
-        >
-          <option value="">All Academic Departments</option>
-          {departments.map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.name} ({d.code})
-            </option>
-          ))}
-        </select>
+        {user?.role === 'FACULTY' ? (
+          <div className="px-3.5 py-2 text-sm bg-slate-100 border border-slate-300 rounded-xl text-slate-700 font-semibold flex items-center gap-1.5 cursor-not-allowed">
+            <Lock className="w-3.5 h-3.5 text-slate-400" />
+            <span>Department: {students[0]?.departmentName || 'Your Department'}</span>
+          </div>
+        ) : (
+          <select
+            value={selectedDeptId}
+            onChange={(e) => {
+              setSelectedDeptId(e.target.value);
+              setPage(0);
+            }}
+            className="px-3.5 py-2 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-700 font-medium"
+          >
+            <option value="">All Academic Departments</option>
+            {departments.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name} ({d.code})
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* Data Table */}
@@ -613,30 +664,41 @@ const ManageStudents = () => {
         {viewingStudent && (
           <div className="space-y-6">
             <div className="flex items-center gap-4 p-4 rounded-2xl bg-indigo-50 border border-indigo-100">
-              <div className="w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-extrabold text-xl">
-                {viewingStudent.firstName?.[0]}
-                {viewingStudent.lastName?.[0]}
+              <div className="w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-extrabold text-xl uppercase">
+                {viewingStudent.name ? viewingStudent.name.split(' ').filter(Boolean).map((n) => n[0]).join('').substring(0, 2).toUpperCase() : 'ST'}
               </div>
               <div>
                 <h3 className="text-lg font-bold text-slate-900">
-                  {viewingStudent.firstName} {viewingStudent.lastName}
+                  {viewingStudent.name}
                 </h3>
-                <div className="flex items-center gap-2 mt-1">
+                <div className="flex flex-wrap items-center gap-2 mt-1">
                   <span className="font-mono text-xs font-bold px-2 py-0.5 bg-white text-indigo-700 rounded border border-indigo-200">
                     {viewingStudent.rollNumber}
                   </span>
                   <span className="text-xs text-slate-600 font-medium">
                     {viewingStudent.departmentName}
                   </span>
+                  <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-indigo-100 text-indigo-700">
+                    Semester {viewingStudent.semester ?? 1}
+                  </span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${viewingStudent.status === 'ACTIVE' || viewingStudent.enabled !== false ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                    {viewingStudent.status || (viewingStudent.enabled !== false ? 'ACTIVE' : 'INACTIVE')}
+                  </span>
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
               <div className="p-3 bg-slate-50 rounded-xl">
                 <span className="text-slate-400 font-semibold block">Academic Year</span>
                 <span className="text-slate-800 font-bold mt-1 block">
                   {viewingStudent.academicYear || '2024-2025'}
+                </span>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl">
+                <span className="text-slate-400 font-semibold block">Age</span>
+                <span className="text-slate-800 font-bold mt-1 block">
+                  {viewingStudent.age ? `${viewingStudent.age} Years` : '—'}
                 </span>
               </div>
               <div className="p-3 bg-slate-50 rounded-xl">
@@ -652,6 +714,15 @@ const ManageStudents = () => {
                 </span>
               </div>
             </div>
+
+            {viewingStudent.address && (
+              <div className="p-3 bg-slate-50 rounded-xl text-xs">
+                <span className="text-slate-400 font-semibold block">Campus / Home Address</span>
+                <span className="text-slate-800 font-medium mt-1 block">
+                  {viewingStudent.address}
+                </span>
+              </div>
+            )}
 
             <div>
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
@@ -744,7 +815,7 @@ const ManageStudents = () => {
         title={editingStudent ? 'Edit Student Profile' : 'Admit New Student'}
       >
         <form onSubmit={handleSaveStudent} className="space-y-4">
-          {!editingStudent && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
                 Roll Number <span className="text-rose-500">*</span>
@@ -755,34 +826,19 @@ const ManageStudents = () => {
                 onChange={(e) => setStudentFormData({ ...studentFormData, rollNumber: e.target.value })}
                 placeholder="CS2026001"
                 required
-                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 uppercase font-mono"
-              />
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
-                First Name <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={studentFormData.firstName}
-                onChange={(e) => setStudentFormData({ ...studentFormData, firstName: e.target.value })}
-                placeholder="Jane"
-                required
-                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                disabled={!!editingStudent}
+                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 uppercase font-mono disabled:opacity-60 disabled:bg-slate-100"
               />
             </div>
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
-                Last Name <span className="text-rose-500">*</span>
+                Student Full Name <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
-                value={studentFormData.lastName}
-                onChange={(e) => setStudentFormData({ ...studentFormData, lastName: e.target.value })}
-                placeholder="Doe"
+                value={studentFormData.name}
+                onChange={(e) => setStudentFormData({ ...studentFormData, name: e.target.value })}
+                placeholder="Ada Lovelace"
                 required
                 className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
               />
@@ -790,7 +846,7 @@ const ManageStudents = () => {
           </div>
 
           {!editingStudent && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
                   Email Address <span className="text-rose-500">*</span>
@@ -821,7 +877,7 @@ const ManageStudents = () => {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
                 Department <span className="text-rose-500">*</span>
@@ -842,6 +898,40 @@ const ManageStudents = () => {
             </div>
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
+                Semester <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={studentFormData.semester}
+                onChange={(e) => setStudentFormData({ ...studentFormData, semester: Number(e.target.value) })}
+                required
+                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              >
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
+                  <option key={sem} value={sem}>
+                    Semester {sem}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
+                Age <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="120"
+                value={studentFormData.age}
+                onChange={(e) => setStudentFormData({ ...studentFormData, age: Number(e.target.value) })}
+                required
+                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
                 Academic Year
               </label>
               <input
@@ -852,17 +942,42 @@ const ManageStudents = () => {
                 className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
               />
             </div>
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
+                Contact Phone
+              </label>
+              <input
+                type="tel"
+                value={studentFormData.phone}
+                onChange={(e) => setStudentFormData({ ...studentFormData, phone: e.target.value })}
+                placeholder="+1 555-019-1234"
+                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
+                Status
+              </label>
+              <select
+                value={studentFormData.status}
+                onChange={(e) => setStudentFormData({ ...studentFormData, status: e.target.value })}
+                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              >
+                <option value="ACTIVE">ACTIVE</option>
+                <option value="INACTIVE">INACTIVE</option>
+              </select>
+            </div>
           </div>
 
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
-              Contact Phone
+              Residential Address
             </label>
             <input
-              type="tel"
-              value={studentFormData.phone}
-              onChange={(e) => setStudentFormData({ ...studentFormData, phone: e.target.value })}
-              placeholder="+1 555-019-1234"
+              type="text"
+              value={studentFormData.address}
+              onChange={(e) => setStudentFormData({ ...studentFormData, address: e.target.value })}
+              placeholder="e.g. 42 Innovation Way, Tech Campus"
               className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
             />
           </div>

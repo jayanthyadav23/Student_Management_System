@@ -13,7 +13,8 @@ import java.util.Optional;
 @Repository
 public interface MarkRepository extends JpaRepository<Mark, Long> {
 
-    Optional<Mark> findByEnrollmentIdAndExamType(Long enrollmentId, ExamType examType);
+    @Query("SELECT m FROM Mark m WHERE m.enrollment.id = :enrollmentId AND m.examType = :examType")
+    Optional<Mark> findByEnrollmentIdAndExamType(@Param("enrollmentId") Long enrollmentId, @Param("examType") ExamType examType);
 
     boolean existsByEnrollmentIdAndExamType(Long enrollmentId, ExamType examType);
 

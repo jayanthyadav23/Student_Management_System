@@ -27,17 +27,20 @@ public class AttendanceServiceImpl implements AttendanceService {
     private final EnrollmentRepository enrollmentRepository;
     private final FacultyRepository facultyRepository;
     private final UserRepository userRepository;
+    private final SubjectRepository subjectRepository;
 
     public AttendanceServiceImpl(AttendanceRepository attendanceRepository,
                                  CourseRepository courseRepository,
                                  EnrollmentRepository enrollmentRepository,
                                  FacultyRepository facultyRepository,
-                                 UserRepository userRepository) {
+                                 UserRepository userRepository,
+                                 SubjectRepository subjectRepository) {
         this.attendanceRepository = attendanceRepository;
         this.courseRepository = courseRepository;
         this.enrollmentRepository = enrollmentRepository;
         this.facultyRepository = facultyRepository;
         this.userRepository = userRepository;
+        this.subjectRepository = subjectRepository;
     }
 
     @Override
@@ -51,7 +54,11 @@ public class AttendanceServiceImpl implements AttendanceService {
         } else {
             Faculty faculty = facultyRepository.findByUserEmail(userEmail)
                     .orElseThrow(() -> new ResourceNotFoundException("Faculty profile not found for user: " + userEmail));
-            courses = courseRepository.findByFacultyId(faculty.getId());
+            Long deptId = (faculty.getDepartment() != null) ? faculty.getDepartment().getId() : null;
+            courses = courseRepository.findCoursesForFaculty(faculty.getId(), deptId);
+            if (courses.isEmpty()) {
+                courses = courseRepository.findAll();
+            }
         }
 
         return courses.stream().map(this::mapToCourseResponse).toList();
@@ -77,7 +84,11 @@ public class AttendanceServiceImpl implements AttendanceService {
         List<Attendance> existingAttendance = attendanceRepository.findByCourseIdAndDate(courseId, date);
 
         Map<Long, Attendance> attendanceMap = existingAttendance.stream()
-                .collect(Collectors.toMap(a -> a.getEnrollment().getId(), a -> a));
+                .collect(Collectors.toMap(a -> a.getEnrollment().getId(), a -> a, (a1, a2) -> a1));
+
+        List<Object[]> summaryList = attendanceRepository.getCourseAttendanceSummary(courseId);
+        Map<Long, Object[]> summaryMap = summaryList.stream()
+                .collect(Collectors.toMap(arr -> (Long) arr[0], arr -> arr, (s1, s2) -> s1));
 
         List<AttendanceRecordResponse> records = new ArrayList<>();
         int presentCount = 0;
@@ -87,11 +98,21 @@ public class AttendanceServiceImpl implements AttendanceService {
         for (Enrollment enrollment : enrollments) {
             Attendance att = attendanceMap.get(enrollment.getId());
             AttendanceStatus status = (att != null) ? att.getStatus() : AttendanceStatus.PRESENT;
+            String remarks = (att != null && att.getRemarks() != null) ? att.getRemarks() : "";
             Long attendanceId = (att != null) ? att.getId() : null;
 
             if (status == AttendanceStatus.PRESENT) presentCount++;
             else if (status == AttendanceStatus.LATE) lateCount++;
             else if (status == AttendanceStatus.ABSENT) absentCount++;
+
+            Object[] stat = summaryMap.get(enrollment.getId());
+            int totalSessions = (stat != null && stat[4] != null) ? ((Number) stat[4]).intValue() : 0;
+            int presentSessions = (stat != null && stat[5] != null) ? ((Number) stat[5]).intValue() : 0;
+            int lateSessions = (stat != null && stat[6] != null) ? ((Number) stat[6]).intValue() : 0;
+            int attended = presentSessions + lateSessions;
+            double pct = (totalSessions > 0)
+                    ? Math.round(((double) (presentSessions + lateSessions * 0.5) / totalSessions * 100.0) * 10.0) / 10.0
+                    : 100.0;
 
             records.add(new AttendanceRecordResponse(
                     attendanceId,
@@ -100,7 +121,11 @@ public class AttendanceServiceImpl implements AttendanceService {
                     enrollment.getStudent().getRollNumber(),
                     enrollment.getStudent().getName(),
                     date,
-                    status
+                    status,
+                    remarks,
+                    pct,
+                    totalSessions,
+                    attended
             ));
         }
 
@@ -120,14 +145,18 @@ public class AttendanceServiceImpl implements AttendanceService {
     @Override
     @Transactional
     public CourseAttendanceSummaryResponse markBulkAttendance(Long courseId, BulkAttendanceRequest request, String userEmail) {
-        if (request.date().isAfter(LocalDate.now())) {
+        if (request.date().isAfter(LocalDate.now().plusDays(1))) {
             throw new BadRequestException("Attendance date cannot be in the future: " + request.date());
         }
 
         Course course = getCourseById(courseId);
         validateCourseAccess(course, userEmail);
 
-        for (StudentAttendanceEntry entry : request.entries()) {
+        // Deduplicate incoming entries by enrollmentId
+        Map<Long, StudentAttendanceEntry> uniqueEntries = request.entries().stream()
+                .collect(Collectors.toMap(StudentAttendanceEntry::enrollmentId, e -> e, (e1, e2) -> e2));
+
+        for (StudentAttendanceEntry entry : uniqueEntries.values()) {
             Enrollment enrollment = enrollmentRepository.findById(entry.enrollmentId())
                     .orElseThrow(() -> new ResourceNotFoundException("Enrollment", "id", entry.enrollmentId()));
 
@@ -139,9 +168,12 @@ public class AttendanceServiceImpl implements AttendanceService {
             if (existing.isPresent()) {
                 Attendance attendance = existing.get();
                 attendance.setStatus(entry.status());
+                if (entry.remarks() != null) {
+                    attendance.setRemarks(entry.remarks());
+                }
                 attendanceRepository.save(attendance);
             } else {
-                Attendance attendance = new Attendance(enrollment, request.date(), entry.status());
+                Attendance attendance = new Attendance(enrollment, request.date(), entry.status(), entry.remarks());
                 attendanceRepository.save(attendance);
             }
         }
@@ -174,8 +206,25 @@ public class AttendanceServiceImpl implements AttendanceService {
             return;
         }
 
-        if (course.getFaculty() == null ||
-                !course.getFaculty().getUser().getEmail().equalsIgnoreCase(userEmail)) {
+        Faculty faculty = facultyRepository.findByUserEmail(userEmail)
+                .orElseThrow(() -> new UnauthorizedAccessException("Faculty profile not found for user: " + userEmail));
+
+        boolean isDirectlyAssigned = course.getFaculty() != null &&
+                (course.getFaculty().getId().equals(faculty.getId()) ||
+                 course.getFaculty().getUser().getEmail().equalsIgnoreCase(userEmail));
+
+        boolean teachesSubject = subjectRepository.existsByCourseIdAndFacultyId(course.getId(), faculty.getId());
+
+        Long facultyDeptId = (faculty.getDepartment() != null) ? faculty.getDepartment().getId() : null;
+        boolean sameDepartment = course.getDepartment() != null &&
+                facultyDeptId != null &&
+                course.getDepartment().getId().equals(facultyDeptId);
+
+        boolean courseUnassigned = course.getFaculty() == null;
+
+        boolean noRestrictedCourses = courseRepository.findCoursesForFaculty(faculty.getId(), facultyDeptId).isEmpty();
+
+        if (!isDirectlyAssigned && !teachesSubject && !sameDepartment && !courseUnassigned && !noRestrictedCourses) {
             throw new UnauthorizedAccessException("You are not assigned to instruct or view course '" + course.getCode() + "'");
         }
     }

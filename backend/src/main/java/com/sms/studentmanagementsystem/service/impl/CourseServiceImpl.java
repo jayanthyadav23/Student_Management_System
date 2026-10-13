@@ -70,6 +70,11 @@ public class CourseServiceImpl implements CourseService {
         if (request.facultyId() != null) {
             faculty = facultyRepository.findById(request.facultyId())
                     .orElseThrow(() -> new ResourceNotFoundException("Faculty", "id", request.facultyId()));
+            if (!faculty.getDepartment().getId().equals(department.getId())) {
+                throw new BadRequestException("Department mismatch: Faculty '" + faculty.getName() +
+                        "' belongs to department '" + faculty.getDepartment().getName() +
+                        "', which does not match course department '" + department.getName() + "'.");
+            }
         }
 
         Course course = new Course(
@@ -161,6 +166,11 @@ public class CourseServiceImpl implements CourseService {
         if (request.facultyId() != null) {
             faculty = facultyRepository.findById(request.facultyId())
                     .orElseThrow(() -> new ResourceNotFoundException("Faculty", "id", request.facultyId()));
+            if (!faculty.getDepartment().getId().equals(department.getId())) {
+                throw new BadRequestException("Department mismatch: Faculty '" + faculty.getName() +
+                        "' belongs to department '" + faculty.getDepartment().getName() +
+                        "', which does not match course department '" + department.getName() + "'.");
+            }
         }
 
         course.setCode(cleanCode);
@@ -194,6 +204,11 @@ public class CourseServiceImpl implements CourseService {
         if (request.facultyId() != null) {
             Faculty faculty = facultyRepository.findById(request.facultyId())
                     .orElseThrow(() -> new ResourceNotFoundException("Faculty", "id", request.facultyId()));
+            if (!faculty.getDepartment().getId().equals(course.getDepartment().getId())) {
+                throw new BadRequestException("Department mismatch: Faculty '" + faculty.getName() +
+                        "' belongs to department '" + faculty.getDepartment().getName() +
+                        "', which does not match course department '" + course.getDepartment().getName() + "'.");
+            }
             course.setFaculty(faculty);
         } else {
             course.setFaculty(null);

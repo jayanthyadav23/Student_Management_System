@@ -15,7 +15,29 @@ public interface StudentService {
 
     StudentResponse getStudentById(Long id);
 
-    PageResponse<StudentResponse> getAllStudents(String search, Long departmentId, Integer semester, int page, int size, String sortBy, String sortDir);
+    PageResponse<StudentResponse> getAllStudents(
+            String search,
+            Long departmentId,
+            Integer semester,
+            String academicYear,
+            String section,
+            Long courseId,
+            int page,
+            int size,
+            String sortBy,
+            String sortDir
+    );
+
+    default PageResponse<StudentResponse> getAllStudents(
+            String search,
+            Long departmentId,
+            Integer semester,
+            int page,
+            int size,
+            String sortBy,
+            String sortDir) {
+        return getAllStudents(search, departmentId, semester, null, null, null, page, size, sortBy, sortDir);
+    }
 
     StudentResponse updateStudent(Long id, StudentUpdateRequest request);
 
@@ -29,5 +51,16 @@ public interface StudentService {
 
     StudentResponse toggleStudentStatus(Long id);
 
-    List<StudentResponse> getAllStudentsList(String search, Long departmentId, Integer semester);
+    List<StudentResponse> getAllStudentsList(
+            String search,
+            Long departmentId,
+            Integer semester,
+            String academicYear,
+            String section,
+            Long courseId
+    );
+
+    default List<StudentResponse> getAllStudentsList(String search, Long departmentId, Integer semester) {
+        return getAllStudentsList(search, departmentId, semester, null, null, null);
+    }
 }

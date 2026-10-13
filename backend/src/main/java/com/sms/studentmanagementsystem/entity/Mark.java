@@ -33,14 +33,22 @@ public class Mark {
     @Column(name = "max_score", nullable = false)
     private Double maxScore;
 
+    @Column(length = 255)
+    private String remarks;
+
     public Mark() {
     }
 
     public Mark(Enrollment enrollment, ExamType examType, Double score, Double maxScore) {
+        this(enrollment, examType, score, maxScore, null);
+    }
+
+    public Mark(Enrollment enrollment, ExamType examType, Double score, Double maxScore, String remarks) {
         this.enrollment = enrollment;
         this.examType = examType;
         this.score = score;
         this.maxScore = maxScore;
+        this.remarks = remarks;
     }
 
     public Long getId() {
@@ -81,5 +89,13 @@ public class Mark {
 
     public void setMaxScore(Double maxScore) {
         this.maxScore = maxScore;
+    }
+
+    public String getRemarks() {
+        return remarks;
+    }
+
+    public void setRemarks(String remarks) {
+        this.remarks = remarks;
     }
 }

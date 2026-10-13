@@ -31,6 +31,9 @@ public class Attendance {
     @Column(nullable = false, length = 20)
     private AttendanceStatus status;
 
+    @Column(length = 255)
+    private String remarks;
+
     public Attendance() {
     }
 
@@ -38,6 +41,13 @@ public class Attendance {
         this.enrollment = enrollment;
         this.date = date;
         this.status = status;
+    }
+
+    public Attendance(Enrollment enrollment, LocalDate date, AttendanceStatus status, String remarks) {
+        this.enrollment = enrollment;
+        this.date = date;
+        this.status = status;
+        this.remarks = remarks;
     }
 
     public Long getId() {
@@ -70,5 +80,13 @@ public class Attendance {
 
     public void setStatus(AttendanceStatus status) {
         this.status = status;
+    }
+
+    public String getRemarks() {
+        return remarks;
+    }
+
+    public void setRemarks(String remarks) {
+        this.remarks = remarks;
     }
 }

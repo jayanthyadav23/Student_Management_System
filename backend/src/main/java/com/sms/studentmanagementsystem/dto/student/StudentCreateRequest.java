@@ -33,7 +33,12 @@ public record StudentCreateRequest(
         Integer semester,
 
         String academicYear,
+        String section,
         String status,
         String phone,
         String address
-) {}
+) {
+    public StudentCreateRequest(String rollNumber, String name, String email, String password, Integer age, Long departmentId, Integer semester, String academicYear, String status, String phone, String address) {
+        this(rollNumber, name, email, password, age, departmentId, semester, academicYear, "A", status, phone, address);
+    }
+}

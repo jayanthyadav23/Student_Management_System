@@ -17,8 +17,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/admin/students")
-@PreAuthorize("hasRole('ADMIN')")
+@RequestMapping({"/api/admin/students", "/api/students"})
+@PreAuthorize("hasAnyRole('ADMIN', 'FACULTY')")
 public class StudentController {
 
     private final StudentService studentService;
@@ -40,11 +40,15 @@ public class StudentController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Long departmentId,
             @RequestParam(required = false) Integer semester,
+            @RequestParam(required = false) String academicYear,
+            @RequestParam(required = false) String section,
+            @RequestParam(required = false) Long courseId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "id") String sortBy,
             @RequestParam(defaultValue = "asc") String sortDir) {
-        PageResponse<StudentResponse> students = studentService.getAllStudents(search, departmentId, semester, page, size, sortBy, sortDir);
+        PageResponse<StudentResponse> students = studentService.getAllStudents(
+                search, departmentId, semester, academicYear, section, courseId, page, size, sortBy, sortDir);
         return ResponseEntity.ok(ApiResponse.success("Students retrieved successfully", students));
     }
 
@@ -100,8 +104,11 @@ public class StudentController {
     public ResponseEntity<ApiResponse<List<StudentResponse>>> getAllStudentsList(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Long departmentId,
-            @RequestParam(required = false) Integer semester) {
-        List<StudentResponse> list = studentService.getAllStudentsList(search, departmentId, semester);
+            @RequestParam(required = false) Integer semester,
+            @RequestParam(required = false) String academicYear,
+            @RequestParam(required = false) String section,
+            @RequestParam(required = false) Long courseId) {
+        List<StudentResponse> list = studentService.getAllStudentsList(search, departmentId, semester, academicYear, section, courseId);
         return ResponseEntity.ok(ApiResponse.success("All students list retrieved", list));
     }
 }

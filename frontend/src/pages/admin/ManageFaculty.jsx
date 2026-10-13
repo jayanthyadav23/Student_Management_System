@@ -17,6 +17,7 @@ import {
   Phone,
   DoorOpen,
   Sparkles,
+  Eye,
 } from 'lucide-react';
 
 const ManageFaculty = () => {
@@ -46,6 +47,9 @@ const ManageFaculty = () => {
     officeRoom: '',
   });
   const [submitting, setSubmitting] = useState(false);
+
+  // Profile Modal State
+  const [viewingFaculty, setViewingFaculty] = useState(null);
 
   // Delete State
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -310,6 +314,13 @@ const ManageFaculty = () => {
       render: (row) => (
         <div className="flex items-center justify-end gap-2">
           <button
+            onClick={() => setViewingFaculty(row)}
+            className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+            title="View faculty profile"
+          >
+            <Eye className="w-4 h-4" />
+          </button>
+          <button
             onClick={() => handleOpenEdit(row)}
             className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
             title="Edit faculty"
@@ -555,6 +566,96 @@ const ManageFaculty = () => {
         confirmVariant="danger"
         loading={isDeleting}
       />
+
+      {/* Faculty Profile Overview Modal */}
+      <Modal
+        isOpen={!!viewingFaculty}
+        onClose={() => setViewingFaculty(null)}
+        title="Faculty Member Profile"
+        maxWidth="max-w-2xl"
+      >
+        {viewingFaculty && (
+          <div className="space-y-6">
+            <div className="flex items-center gap-4 p-4 rounded-2xl bg-indigo-50 border border-indigo-100">
+              <div className="w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-extrabold text-xl uppercase">
+                {viewingFaculty.name
+                  ? viewingFaculty.name.split(' ').filter(Boolean).map((n) => n[0]).join('').substring(0, 2).toUpperCase()
+                  : 'FC'}
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">{viewingFaculty.name}</h3>
+                <div className="flex flex-wrap items-center gap-2 mt-1">
+                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                    {viewingFaculty.designation}
+                  </span>
+                  <span className="text-xs text-slate-600 font-medium">
+                    {viewingFaculty.departmentName}
+                  </span>
+                  <span
+                    className={`text-xs px-2.5 py-0.5 rounded-full font-semibold ${
+                      viewingFaculty.status !== 'INACTIVE'
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : 'bg-rose-100 text-rose-700'
+                    }`}
+                  >
+                    {viewingFaculty.status || 'ACTIVE'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+              <div className="p-3 bg-slate-50 rounded-xl">
+                <span className="text-slate-400 font-semibold block">Email Address</span>
+                <span className="text-slate-800 font-bold mt-1 block truncate">
+                  {viewingFaculty.email}
+                </span>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl">
+                <span className="text-slate-400 font-semibold block">Phone Number</span>
+                <span className="text-slate-800 font-bold mt-1 block">
+                  {viewingFaculty.phone || 'N/A'}
+                </span>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl">
+                <span className="text-slate-400 font-semibold block">Office Location</span>
+                <span className="text-slate-800 font-bold mt-1 block">
+                  {viewingFaculty.officeRoom || 'N/A'}
+                </span>
+              </div>
+            </div>
+
+            {viewingFaculty.specialization && (
+              <div className="p-3 bg-slate-50 rounded-xl text-xs">
+                <span className="text-slate-400 font-semibold block">Academic Specialization</span>
+                <span className="text-indigo-700 font-bold mt-1 block">
+                  {viewingFaculty.specialization}
+                </span>
+              </div>
+            )}
+
+            <div className="p-4 bg-slate-50 rounded-2xl flex items-center justify-between text-xs">
+              <div>
+                <span className="text-slate-400 font-semibold block">Assigned Teaching Load</span>
+                <span className="text-slate-900 font-extrabold text-base mt-0.5 block">
+                  {viewingFaculty.assignedCoursesCount ?? 0} Active Courses
+                </span>
+              </div>
+              <span className="text-slate-400">Department: {viewingFaculty.departmentName}</span>
+            </div>
+
+            <div className="flex justify-end pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setViewingFaculty(null)}
+                className="px-4 py-2 border border-slate-300 text-slate-700 text-xs font-semibold rounded-xl hover:bg-slate-50"
+              >
+                Close Profile
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

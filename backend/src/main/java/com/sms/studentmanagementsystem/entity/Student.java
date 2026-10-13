@@ -41,6 +41,9 @@ public class Student {
     @Column(name = "academic_year", length = 20)
     private String academicYear = "2025-2026";
 
+    @Column(name = "section", length = 20)
+    private String section = "A";
+
     @Column(length = 20)
     private String status = "ACTIVE";
 
@@ -134,6 +137,14 @@ public class Student {
 
     public void setAcademicYear(String academicYear) {
         this.academicYear = academicYear;
+    }
+
+    public String getSection() {
+        return (section != null && !section.isBlank()) ? section : "A";
+    }
+
+    public void setSection(String section) {
+        this.section = (section != null && !section.isBlank()) ? section : "A";
     }
 
     public String getStatus() {

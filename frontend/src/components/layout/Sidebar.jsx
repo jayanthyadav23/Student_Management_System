@@ -35,6 +35,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     } else if (role === 'FACULTY') {
       return [
         { to: '/faculty', label: 'Dashboard', icon: LayoutDashboard },
+        { to: '/faculty/students', label: 'Students', icon: GraduationCap },
         { to: '/faculty/timetable', label: 'Timetable', icon: Calendar },
         { to: '/faculty/announcements', label: 'Announcements', icon: Megaphone },
         { to: '/faculty/attendance', label: 'Attendance', icon: CalendarCheck },

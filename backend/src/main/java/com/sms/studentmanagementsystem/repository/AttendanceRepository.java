@@ -14,7 +14,8 @@ import java.util.Optional;
 @Repository
 public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
 
-    Optional<Attendance> findByEnrollmentIdAndDate(Long enrollmentId, LocalDate date);
+    @Query("SELECT a FROM Attendance a WHERE a.enrollment.id = :enrollmentId AND a.date = :date")
+    Optional<Attendance> findByEnrollmentIdAndDate(@Param("enrollmentId") Long enrollmentId, @Param("date") LocalDate date);
 
     boolean existsByEnrollmentIdAndDate(Long enrollmentId, LocalDate date);
 

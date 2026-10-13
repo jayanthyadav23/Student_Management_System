@@ -23,6 +23,13 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
     @Query("SELECT c FROM Course c JOIN FETCH c.department LEFT JOIN FETCH c.faculty WHERE c.faculty.id = :facultyId")
     List<Course> findByFacultyId(@Param("facultyId") Long facultyId);
 
+    @Query("SELECT DISTINCT c FROM Course c JOIN FETCH c.department LEFT JOIN FETCH c.faculty " +
+            "WHERE c.faculty.id = :facultyId " +
+            "OR c.id IN (SELECT s.course.id FROM Subject s WHERE s.faculty.id = :facultyId AND s.course IS NOT NULL) " +
+            "OR c.department.id = :departmentId " +
+            "ORDER BY c.code ASC")
+    List<Course> findCoursesForFaculty(@Param("facultyId") Long facultyId, @Param("departmentId") Long departmentId);
+
     @Query(
             value = "SELECT c FROM Course c JOIN FETCH c.department LEFT JOIN FETCH c.faculty WHERE c.faculty.id = :facultyId",
             countQuery = "SELECT COUNT(c) FROM Course c WHERE c.faculty.id = :facultyId"

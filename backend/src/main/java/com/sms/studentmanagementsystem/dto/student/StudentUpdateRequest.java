@@ -25,7 +25,12 @@ public record StudentUpdateRequest(
         Integer semester,
 
         String academicYear,
+        String section,
         String status,
         String phone,
         String address
-) {}
+) {
+    public StudentUpdateRequest(String rollNumber, String name, Integer age, Long departmentId, Integer semester, String academicYear, String status, String phone, String address) {
+        this(rollNumber, name, age, departmentId, semester, academicYear, "A", status, phone, address);
+    }
+}

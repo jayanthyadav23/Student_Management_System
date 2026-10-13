@@ -67,6 +67,7 @@ function App() {
       {/* FACULTY Portal Routes */}
       <Route element={<ProtectedRoute allowedRoles={['FACULTY', 'ADMIN']} />}>
         <Route path="/faculty" element={<FacultyDashboard />} />
+        <Route path="/faculty/students" element={<ManageStudents />} />
         <Route path="/faculty/timetable" element={<TimetableView />} />
         <Route path="/faculty/announcements" element={<AnnouncementsView />} />
         <Route path="/faculty/attendance" element={<FacultyAttendance />} />
