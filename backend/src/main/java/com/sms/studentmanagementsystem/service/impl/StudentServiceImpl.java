@@ -161,6 +161,18 @@ public class StudentServiceImpl implements StudentService {
                 pageable
         );
 
+        if (studentPage.isEmpty() && departmentId == null && effectiveDepartmentId != null) {
+            studentPage = studentRepository.findWithFilters(
+                    null,
+                    semester,
+                    cleanAcademicYear,
+                    cleanSection,
+                    cleanSearch,
+                    courseId,
+                    pageable
+            );
+        }
+
         List<StudentResponse> responseList = studentPage.getContent().stream()
                 .map(this::mapToResponse)
                 .toList();
@@ -282,6 +294,17 @@ public class StudentServiceImpl implements StudentService {
                 courseId
         );
 
+        if (list.isEmpty() && departmentId == null && effectiveDepartmentId != null) {
+            list = studentRepository.findListWithFilters(
+                    null,
+                    semester,
+                    cleanAcademicYear,
+                    cleanSection,
+                    cleanSearch,
+                    courseId
+            );
+        }
+
         return list.stream().map(this::mapToResponse).toList();
     }
 
@@ -307,7 +330,8 @@ public class StudentServiceImpl implements StudentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Course", "id", request.courseId()));
 
         // Department-wise validation: student must belong to the course's department
-        if (!student.getDepartment().getId().equals(course.getDepartment().getId())) {
+        if (student.getDepartment() != null && course.getDepartment() != null &&
+                !student.getDepartment().getId().equals(course.getDepartment().getId())) {
             throw new BadRequestException("Department mismatch: Student '" + student.getName() +
                     "' belongs to department '" + student.getDepartment().getName() +
                     "', but course '" + course.getCode() + "' belongs to department '" +

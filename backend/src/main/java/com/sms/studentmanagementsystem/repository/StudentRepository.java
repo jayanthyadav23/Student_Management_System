@@ -36,26 +36,26 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
 
     @Query(
             value = "SELECT DISTINCT s FROM Student s " +
-                    "JOIN FETCH s.department d " +
-                    "JOIN FETCH s.user u " +
-                    "WHERE (:departmentId IS NULL OR d.id = :departmentId) " +
+                    "LEFT JOIN FETCH s.department d " +
+                    "LEFT JOIN FETCH s.user u " +
+                    "WHERE (:departmentId IS NULL OR (d IS NOT NULL AND d.id = :departmentId)) " +
                     "AND (:semester IS NULL OR s.semester = :semester) " +
                     "AND (:academicYear IS NULL OR s.academicYear = :academicYear) " +
                     "AND (:section IS NULL OR s.section = :section) " +
                     "AND (:query IS NULL OR (LOWER(s.name) LIKE LOWER(CONCAT('%', :query, '%')) " +
                     "     OR LOWER(s.rollNumber) LIKE LOWER(CONCAT('%', :query, '%')) " +
-                    "     OR LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%')))) " +
+                    "     OR (u IS NOT NULL AND LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%'))))) " +
                     "AND (:courseId IS NULL OR EXISTS (SELECT 1 FROM Enrollment e WHERE e.student = s AND e.course.id = :courseId))",
             countQuery = "SELECT COUNT(DISTINCT s) FROM Student s " +
-                    "JOIN s.department d " +
-                    "JOIN s.user u " +
-                    "WHERE (:departmentId IS NULL OR d.id = :departmentId) " +
+                    "LEFT JOIN s.department d " +
+                    "LEFT JOIN s.user u " +
+                    "WHERE (:departmentId IS NULL OR (d IS NOT NULL AND d.id = :departmentId)) " +
                     "AND (:semester IS NULL OR s.semester = :semester) " +
                     "AND (:academicYear IS NULL OR s.academicYear = :academicYear) " +
                     "AND (:section IS NULL OR s.section = :section) " +
                     "AND (:query IS NULL OR (LOWER(s.name) LIKE LOWER(CONCAT('%', :query, '%')) " +
                     "     OR LOWER(s.rollNumber) LIKE LOWER(CONCAT('%', :query, '%')) " +
-                    "     OR LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%')))) " +
+                    "     OR (u IS NOT NULL AND LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%'))))) " +
                     "AND (:courseId IS NULL OR EXISTS (SELECT 1 FROM Enrollment e WHERE e.student = s AND e.course.id = :courseId))"
     )
     Page<Student> findWithFilters(
@@ -70,15 +70,15 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
 
     @Query(
             value = "SELECT DISTINCT s FROM Student s " +
-                    "JOIN FETCH s.department d " +
-                    "JOIN FETCH s.user u " +
-                    "WHERE (:departmentId IS NULL OR d.id = :departmentId) " +
+                    "LEFT JOIN FETCH s.department d " +
+                    "LEFT JOIN FETCH s.user u " +
+                    "WHERE (:departmentId IS NULL OR (d IS NOT NULL AND d.id = :departmentId)) " +
                     "AND (:semester IS NULL OR s.semester = :semester) " +
                     "AND (:academicYear IS NULL OR s.academicYear = :academicYear) " +
                     "AND (:section IS NULL OR s.section = :section) " +
                     "AND (:query IS NULL OR (LOWER(s.name) LIKE LOWER(CONCAT('%', :query, '%')) " +
                     "     OR LOWER(s.rollNumber) LIKE LOWER(CONCAT('%', :query, '%')) " +
-                    "     OR LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%')))) " +
+                    "     OR (u IS NOT NULL AND LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%'))))) " +
                     "AND (:courseId IS NULL OR EXISTS (SELECT 1 FROM Enrollment e WHERE e.student = s AND e.course.id = :courseId))"
     )
     List<Student> findListWithFilters(
