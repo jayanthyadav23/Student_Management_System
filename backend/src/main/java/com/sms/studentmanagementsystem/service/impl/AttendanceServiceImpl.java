@@ -86,9 +86,19 @@ public class AttendanceServiceImpl implements AttendanceService {
         Map<Long, Attendance> attendanceMap = existingAttendance.stream()
                 .collect(Collectors.toMap(a -> a.getEnrollment().getId(), a -> a, (a1, a2) -> a1));
 
-        List<Object[]> summaryList = attendanceRepository.getCourseAttendanceSummary(courseId);
-        Map<Long, Object[]> summaryMap = summaryList.stream()
-                .collect(Collectors.toMap(arr -> (Long) arr[0], arr -> arr, (s1, s2) -> s1));
+        Map<Long, Object[]> summaryMap = new HashMap<>();
+        try {
+            List<Object[]> summaryList = attendanceRepository.getCourseAttendanceSummary(courseId);
+            if (summaryList != null) {
+                for (Object[] arr : summaryList) {
+                    if (arr != null && arr.length > 0 && arr[0] instanceof Number numId) {
+                        summaryMap.put(numId.longValue(), arr);
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            // Log and allow attendance sheet to proceed safely
+        }
 
         List<AttendanceRecordResponse> records = new ArrayList<>();
         int presentCount = 0;
@@ -96,6 +106,8 @@ public class AttendanceServiceImpl implements AttendanceService {
         int absentCount = 0;
 
         for (Enrollment enrollment : enrollments) {
+            if (enrollment == null || enrollment.getStudent() == null) continue;
+
             Attendance att = attendanceMap.get(enrollment.getId());
             AttendanceStatus status = (att != null) ? att.getStatus() : AttendanceStatus.PRESENT;
             String remarks = (att != null && att.getRemarks() != null) ? att.getRemarks() : "";
@@ -106,20 +118,23 @@ public class AttendanceServiceImpl implements AttendanceService {
             else if (status == AttendanceStatus.ABSENT) absentCount++;
 
             Object[] stat = summaryMap.get(enrollment.getId());
-            int totalSessions = (stat != null && stat[4] != null) ? ((Number) stat[4]).intValue() : 0;
-            int presentSessions = (stat != null && stat[5] != null) ? ((Number) stat[5]).intValue() : 0;
-            int lateSessions = (stat != null && stat[6] != null) ? ((Number) stat[6]).intValue() : 0;
+            int totalSessions = (stat != null && stat.length > 1 && stat[1] instanceof Number n) ? n.intValue() : 0;
+            int presentSessions = (stat != null && stat.length > 2 && stat[2] instanceof Number n) ? n.intValue() : 0;
+            int lateSessions = (stat != null && stat.length > 3 && stat[3] instanceof Number n) ? n.intValue() : 0;
             int attended = presentSessions + lateSessions;
             double pct = (totalSessions > 0)
                     ? Math.round(((double) (presentSessions + lateSessions * 0.5) / totalSessions * 100.0) * 10.0) / 10.0
                     : 100.0;
 
+            String rollNumber = enrollment.getStudent().getRollNumber() != null ? enrollment.getStudent().getRollNumber() : "N/A";
+            String studentName = enrollment.getStudent().getName() != null ? enrollment.getStudent().getName() : "Unknown";
+
             records.add(new AttendanceRecordResponse(
                     attendanceId,
                     enrollment.getId(),
                     enrollment.getStudent().getId(),
-                    enrollment.getStudent().getRollNumber(),
-                    enrollment.getStudent().getName(),
+                    rollNumber,
+                    studentName,
                     date,
                     status,
                     remarks,
@@ -244,14 +259,18 @@ public class AttendanceServiceImpl implements AttendanceService {
         Long facultyId = course.getFaculty() != null ? course.getFaculty().getId() : null;
         String facultyName = course.getFaculty() != null ? course.getFaculty().getName() : "Unassigned";
 
+        Long deptId = course.getDepartment() != null ? course.getDepartment().getId() : null;
+        String deptName = course.getDepartment() != null ? course.getDepartment().getName() : "General";
+        String deptCode = course.getDepartment() != null ? course.getDepartment().getCode() : "GEN";
+
         return new CourseResponse(
                 course.getId(),
                 course.getCode(),
                 course.getTitle(),
                 course.getCredits(),
-                course.getDepartment().getId(),
-                course.getDepartment().getName(),
-                course.getDepartment().getCode(),
+                deptId,
+                deptName,
+                deptCode,
                 facultyId,
                 facultyName,
                 course.getSemester(),

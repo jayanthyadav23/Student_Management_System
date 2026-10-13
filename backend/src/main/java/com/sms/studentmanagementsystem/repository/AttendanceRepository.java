@@ -21,7 +21,7 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
 
     List<Attendance> findByEnrollmentIdOrderByDateDesc(Long enrollmentId);
 
-    @Query("SELECT a FROM Attendance a JOIN FETCH a.enrollment e JOIN FETCH e.student WHERE e.course.id = :courseId AND a.date = :date")
+    @Query("SELECT a FROM Attendance a JOIN a.enrollment e WHERE e.course.id = :courseId AND a.date = :date")
     List<Attendance> findByCourseIdAndDate(@Param("courseId") Long courseId, @Param("date") LocalDate date);
 
     long countByEnrollmentId(Long enrollmentId);
@@ -31,14 +31,14 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     @Query("SELECT a.status, COUNT(a) FROM Attendance a WHERE a.enrollment.id = :enrollmentId GROUP BY a.status")
     List<Object[]> countAttendanceByStatusForEnrollment(@Param("enrollmentId") Long enrollmentId);
 
-    @Query("SELECT e.id, e.student.id, e.student.rollNumber, e.student.name, " +
-            "COUNT(a), " +
-            "SUM(CASE WHEN a.status = 'PRESENT' THEN 1 ELSE 0 END), " +
-            "SUM(CASE WHEN a.status = 'LATE' THEN 1 ELSE 0 END), " +
-            "SUM(CASE WHEN a.status = 'ABSENT' THEN 1 ELSE 0 END) " +
+    @Query("SELECT e.id, " +
+            "COUNT(a.id), " +
+            "SUM(CASE WHEN a.status = com.sms.studentmanagementsystem.entity.AttendanceStatus.PRESENT THEN 1 ELSE 0 END), " +
+            "SUM(CASE WHEN a.status = com.sms.studentmanagementsystem.entity.AttendanceStatus.LATE THEN 1 ELSE 0 END), " +
+            "SUM(CASE WHEN a.status = com.sms.studentmanagementsystem.entity.AttendanceStatus.ABSENT THEN 1 ELSE 0 END) " +
             "FROM Enrollment e " +
             "LEFT JOIN Attendance a ON a.enrollment.id = e.id " +
             "WHERE e.course.id = :courseId " +
-            "GROUP BY e.id, e.student.id, e.student.rollNumber, e.student.name")
+            "GROUP BY e.id")
     List<Object[]> getCourseAttendanceSummary(@Param("courseId") Long courseId);
 }

@@ -352,7 +352,11 @@ public class StudentServiceImpl implements StudentService {
         Faculty faculty = facultyRepository.findByUserEmail(currentUser.getEmail())
                 .orElseThrow(() -> new ResourceNotFoundException("Faculty profile not found for user: " + currentUser.getEmail()));
 
-        Long facultyDeptId = faculty.getDepartment().getId();
+        Long facultyDeptId = (faculty.getDepartment() != null) ? faculty.getDepartment().getId() : null;
+        if (facultyDeptId == null) {
+            return requestedDepartmentId;
+        }
+
         if (requestedDepartmentId != null && !requestedDepartmentId.equals(facultyDeptId)) {
             throw new UnauthorizedAccessException("Faculty members are restricted to viewing students from their own department (" + faculty.getDepartment().getName() + ")");
         }
@@ -367,7 +371,7 @@ public class StudentServiceImpl implements StudentService {
             }
         }
 
-        return facultyDeptId;
+        return (requestedDepartmentId != null) ? requestedDepartmentId : facultyDeptId;
     }
 
     private void validateFacultyStudentAccess(Student student) {
@@ -379,25 +383,35 @@ public class StudentServiceImpl implements StudentService {
         User currentUser = userRepository.findByEmail(auth.getName()).orElse(null);
         if (currentUser != null && currentUser.getRole() == Role.FACULTY) {
             Faculty faculty = facultyRepository.findByUserEmail(currentUser.getEmail()).orElse(null);
-            if (faculty != null && !faculty.getDepartment().getId().equals(student.getDepartment().getId())) {
-                throw new UnauthorizedAccessException("You are not authorized to view students outside your department (" + faculty.getDepartment().getName() + ")");
+            if (faculty != null && faculty.getDepartment() != null && student.getDepartment() != null
+                    && !faculty.getDepartment().getId().equals(student.getDepartment().getId())) {
+                throw new UnauthorizedAccessException("Faculty members are restricted to viewing students from their own department (" + faculty.getDepartment().getName() + ")");
             }
         }
     }
 
     private StudentResponse mapToResponse(Student student) {
-        int enrolledCount = enrollmentRepository.findByStudentId(student.getId()).size();
+        long count = enrollmentRepository.countByStudentId(student.getId());
+        int enrolledCount = (int) count;
+
+        Long userId = (student.getUser() != null) ? student.getUser().getId() : null;
+        String email = (student.getUser() != null) ? student.getUser().getEmail() : "N/A";
+        boolean enabled = (student.getUser() != null) && student.getUser().isEnabled();
+
+        Long deptId = (student.getDepartment() != null) ? student.getDepartment().getId() : null;
+        String deptName = (student.getDepartment() != null) ? student.getDepartment().getName() : "General";
+        String deptCode = (student.getDepartment() != null) ? student.getDepartment().getCode() : "GEN";
 
         return new StudentResponse(
                 student.getId(),
-                student.getUser().getId(),
+                userId,
                 student.getRollNumber(),
                 student.getName(),
-                student.getUser().getEmail(),
+                email,
                 student.getAge(),
-                student.getDepartment().getId(),
-                student.getDepartment().getName(),
-                student.getDepartment().getCode(),
+                deptId,
+                deptName,
+                deptCode,
                 student.getSemester(),
                 student.getAcademicYear(),
                 student.getSection(),
@@ -405,7 +419,7 @@ public class StudentServiceImpl implements StudentService {
                 student.getPhone(),
                 student.getAddress(),
                 student.getEnrollmentDate(),
-                student.getUser().isEnabled(),
+                enabled,
                 enrolledCount
         );
     }
